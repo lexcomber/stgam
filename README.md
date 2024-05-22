@@ -11,7 +11,7 @@ The goal of `stgam` is to provide a framework for capturing process spatial and 
 You can install the development version of stgam like so:
 
 ``` r
-# FILL THIS IN! HOW CAN PEOPLE INSTALL YOUR DEV PACKAGE?
+remotes::install_github("lexcomber/stgam")
 ```
 
 ## Example
