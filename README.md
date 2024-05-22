@@ -4,7 +4,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of stgam is to ...
+The goal of stgam is to provide a framework for capturing process spatial and or / or temporal heterogeneity using a varying coefficient modelling approach bansed on GAMs with Gauassian Process smooths.  
 
 ## Installation
 
