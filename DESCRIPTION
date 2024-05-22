@@ -2,7 +2,7 @@ Package: stgam
 Title: Space Time GAMs: Spatially and Temporally Varying Coefficient Models Using GAMs
 Version: 0.0.0.9000
 Authors@R: 
-    person("Lex", "Comber", , "a.comber@leeds.ac.uk", role = c("aut", "cre"),
+    person("Alexis", "Comber", , "a.comber@leeds.ac.uk", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-3652-7846"))
     person("Paul", "Harris", , "paul.harris@rothamsted.ac.uk", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-0259-4079"))
