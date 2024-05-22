@@ -4,7 +4,7 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of `stgam` is to provide a framework for capturing process spatial and or / or temporal heterogeneity, using a varying coefficient modelling approach based on GAMs with Gaussian Process smooths.  It uses BMA. 
+The goal of `stgam` i to provide a framework for capturing process spatial and or / or temporal heterogeneity, using a varying coefficient modelling approach based on GAMs with Gaussian Process smooths.  It uses BMA. 
 
 ## Installation
 
