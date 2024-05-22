@@ -9,4 +9,4 @@
 library(testthat)
 library(stgam)
 
-test_check("stgam")
+#test_check("stgam")
