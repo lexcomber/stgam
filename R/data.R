@@ -37,5 +37,5 @@
 #' @source Bivand, Roger, Jakub Nowosad, and Robin Lovelace. 2019. spData: Datasets for Spatial Analysis. R package
 #'
 #' @examples
-#' data(us_states)
-"us_states"
+#' data(us_data)
+"us_data"
