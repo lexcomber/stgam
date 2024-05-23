@@ -25,8 +25,10 @@ plot_2d_smooth = function(mod, filled = F, outline =  NULL, ncol = NULL, nrow = 
   dev.off()               # close the dummy plot
   # create the plots, rescaling to have same y-axis
   # objects for outputs and axis scaling
-  scale = NULL
   for (i in 1:length(smooths)){
+    y = smooths[[i]]$fit
+    u = y + smooths[[i]]$se
+    l = y - smooths[[i]]$se
     scale <- c(scale, c(min(u, l), max(u,l)))
   }
   plot.list <- NULL

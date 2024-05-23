@@ -8,11 +8,11 @@
 #' @export
 #'
 #' @examples
-#' terms = c("Intercept", "unemp", "pubC")
-#' #SVC
+#' # SVC
 #' data(productivity)
 #' data = productivity |> filter(year == "1970") |> mutate(Intercept = 1)
-#' gam.svc.mod = gam(privC ~ 0 + int + s(X, Y, bs = 'gp', by = int) + unemp + s(X, Y, bs = "gp", by = unemp) + pubC + s(X, Y, bs = "gp", by = pubC), data)
+#' gam.svc.mod = gam(privC ~ 0 + Intercept + s(X, Y, bs = 'gp', by = Intercept) + unemp + s(X, Y, bs = "gp", by = unemp) + pubC + s(X, Y, bs = "gp", by = pubC), data = data)
+#' terms = c("Intercept", "unemp", "pubC")
 #' svcs = calculate_vcs(gam.svc.mod, terms, data)
 
 calculate_vcs = function(model, terms, input_data = us_grid |> st_drop_geometry()) {
