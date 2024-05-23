@@ -22,9 +22,9 @@ a compound plot of the 1D smooths (rendered using cowplot::plot_grid )
 Plots a 1-Dimensional GAM smooth
 }
 \examples{
-library(mgcv)
-library(tidyverse)
-library(cowplot)
+#library(mgcv)
+#library(tidyverse)
+#library(cowplot)
 # 1. from the `mgcv` `gam` function help
 set.seed(2) ## simulate some data...
 dat <- gamSim(1,n=400,dist="normal",scale=2)

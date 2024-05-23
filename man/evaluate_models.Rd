@@ -36,6 +36,7 @@ a data table in data.frame format of all possible model combinations with each c
 Creates evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
 }
 \examples{
+library(dplyr)
 library(glue)
 library(purrr)
 library(doParallel)
