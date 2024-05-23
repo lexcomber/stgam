@@ -2,7 +2,6 @@
 # stgam
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
 The goal of the `stgam` package is to provide a framework for capturing process spatial and or / or temporal heterogeneity, using a varying coefficient modelling approach based on GAMs with Gaussian Process smooths.  It uses BMA. 
