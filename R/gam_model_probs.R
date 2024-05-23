@@ -7,7 +7,10 @@
 #' @export
 #'
 #' @examples
-#' #library(tidyverse)
+#' library(dplyr)
+#' library(purrr)
+#' library(glue)
+#' library(mgcv)
 #' data(productivity)
 #' data = productivity |> filter(year == "1970")
 #' svc_res_gam = evaluate_models(data, STVC = FALSE)

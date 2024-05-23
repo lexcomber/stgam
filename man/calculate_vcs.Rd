@@ -7,11 +7,11 @@
 calculate_vcs(model, terms, input_data)
 }
 \arguments{
+\item{model}{a GAM model with smooths created using the \code{mgcv} package}
+
 \item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names pf the variables in  \code{input_data} )}
 
 \item{input_data}{the data used to create the GAM model, \code{data.frame} or \code{tibble} format}
-
-\item{a}{GAM model with smooths created using the \code{mgcv} package}
 }
 \value{
 a \code{data.frame} of the input data and the coefficient and standard error estimates for each covariate
@@ -25,7 +25,11 @@ library(mgcv)
 # SVC
 data(productivity)
 data = productivity |> filter(year == "1970") |> mutate(Intercept = 1)
-gam.svc.mod = gam(privC ~ 0 + Intercept + s(X, Y, bs = 'gp', by = Intercept) + unemp + s(X, Y, bs = "gp", by = unemp) + pubC + s(X, Y, bs = "gp", by = pubC), data = data)
+gam.svc.mod = gam(privC ~ 0 + Intercept +
+  s(X, Y, bs = 'gp', by = Intercept) +
+  unemp + s(X, Y, bs = "gp", by = unemp) +
+  pubC + s(X, Y, bs = "gp", by = pubC),
+  data = data)
 terms = c("Intercept", "unemp", "pubC")
 svcs = calculate_vcs(gam.svc.mod, terms, data)
 }

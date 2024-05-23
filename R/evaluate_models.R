@@ -117,7 +117,6 @@ evaluate_models = function(data,
       vc_res_gam = rbind(vc_res_gam, res.i)
     }
   } else {
-    library(doParallel)
     cl <- makeCluster(detectCores()-1)
     registerDoParallel(cl)
     vc_res_gam <-

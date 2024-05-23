@@ -9,9 +9,10 @@
 #' @export
 #'
 #' @examples
-#' #library(mgcv)
-#' #library(tidyverse)
-#' #library(cowplot)
+#' library(mgcv)
+#' library(ggplot2)
+#' library(dplyr)
+#' library(cowplot)
 #' # 1. from the `mgcv` `gam` function help
 #' set.seed(2) ## simulate some data...
 #' dat <- gamSim(1,n=400,dist="normal",scale=2)
@@ -20,7 +21,11 @@
 #' # 2. using a TVC
 #' data(productivity)
 #' data = productivity |> mutate(Intercept = 1)
-#' gam.tvc.mod = gam(privC ~ 0 + Intercept + s(year, bs = 'gp', by = Intercept) + unemp + s(year, bs = "gp", by = unemp) + pubC + s(year, bs = "gp", by = pubC), data = data)
+#' gam.tvc.mod = gam(privC ~ 0 + Intercept +
+#'   s(year, bs = 'gp', by = Intercept) +
+#'   unemp + s(year, bs = "gp", by = unemp) +
+#'   pubC + s(year, bs = "gp", by = pubC),
+#'   data = data)
 #' plot_1d_smooth(gam.tvc.mod, fills = "lightblue")
 #'
 plot_1d_smooth = function(mod, ncol = NULL, nrow = NULL, fills = "lightblue") {

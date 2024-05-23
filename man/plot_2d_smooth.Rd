@@ -4,7 +4,7 @@
 \alias{plot_2d_smooth}
 \title{Plots a 2-Dimensional GAM smooth}
 \usage{
-plot_2d_smooth(mod, filled = F, outline = NULL, ncol = NULL, nrow = NULL)
+plot_2d_smooth(mod, filled = FALSE, outline = NULL, ncol = NULL, nrow = NULL)
 }
 \arguments{
 \item{mod}{a GAM model with smooths created using the \code{mgcv} package}
@@ -24,13 +24,14 @@ a compound plot of the 2D smooths (rendered using cowplot::plot_grid )
 Plots a 2-Dimensional GAM smooth
 }
 \examples{
-#library(mgcv)
-#library(tidyverse)
-#library(metR)
-#library(cowplot)
+library(mgcv)
+library(ggplot2)
+library(dplyr)
+library(metR)
+library(cowplot)
 set.seed(2) ## simulate some data...
 dat <- gamSim(1,n=400,dist="normal",scale=2)
 # use x1 and x2 as the coordinates
 b <- gam(y~s(x0, x1, bs = 'gp', by = x2),data=dat)
-plot_2d_smooth(b, filled = T)
+plot_2d_smooth(b, filled = TRUE)
 }

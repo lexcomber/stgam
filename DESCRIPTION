@@ -23,6 +23,7 @@ Depends:
 LazyData: true
 Imports: 
     cols4all,
+    cowplot,
     doParallel,
     dplyr,
     ggplot2,

@@ -1,6 +1,6 @@
 #' Extracts varying coefficient estimates (for SVC, TVC and STVC)
 #'
-#' @param a GAM model with smooths created using the `mgcv` package
+#' @param model a GAM model with smooths created using the `mgcv` package
 #' @param terms a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names pf the variables in  `input_data` )
 #' @param input_data the data used to create the GAM model, `data.frame` or `tibble` format
 #'
@@ -13,7 +13,11 @@
 #' # SVC
 #' data(productivity)
 #' data = productivity |> filter(year == "1970") |> mutate(Intercept = 1)
-#' gam.svc.mod = gam(privC ~ 0 + Intercept + s(X, Y, bs = 'gp', by = Intercept) + unemp + s(X, Y, bs = "gp", by = unemp) + pubC + s(X, Y, bs = "gp", by = pubC), data = data)
+#' gam.svc.mod = gam(privC ~ 0 + Intercept +
+#'   s(X, Y, bs = 'gp', by = Intercept) +
+#'   unemp + s(X, Y, bs = "gp", by = unemp) +
+#'   pubC + s(X, Y, bs = "gp", by = pubC),
+#'   data = data)
 #' terms = c("Intercept", "unemp", "pubC")
 #' svcs = calculate_vcs(gam.svc.mod, terms, data)
 

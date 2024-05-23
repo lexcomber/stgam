@@ -10,17 +10,18 @@
 #' @export
 #'
 #' @examples
-#' #library(mgcv)
-#' #library(tidyverse)
-#' #library(metR)
-#' #library(cowplot)
+#' library(mgcv)
+#' library(ggplot2)
+#' library(dplyr)
+#' library(metR)
+#' library(cowplot)
 #' set.seed(2) ## simulate some data...
 #' dat <- gamSim(1,n=400,dist="normal",scale=2)
 #' # use x1 and x2 as the coordinates
 #' b <- gam(y~s(x0, x1, bs = 'gp', by = x2),data=dat)
-#' plot_2d_smooth(b, filled = T)
+#' plot_2d_smooth(b, filled = TRUE)
 
-plot_2d_smooth = function(mod, filled = F, outline =  NULL, ncol = NULL, nrow = NULL) {
+plot_2d_smooth = function(mod, filled = FALSE, outline =  NULL, ncol = NULL, nrow = NULL) {
   pdf(file = NULL)        # dummy PDF
   smooths <- plot(mod, page = 1)  # call the plot
   dev.off()               # close the dummy plot
