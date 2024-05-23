@@ -8,6 +8,8 @@
 #' @export
 #'
 #' @examples
+#' library(tidyverse)
+#' library(mgcv)
 #' # SVC
 #' data(productivity)
 #' data = productivity |> filter(year == "1970") |> mutate(Intercept = 1)
