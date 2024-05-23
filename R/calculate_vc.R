@@ -17,7 +17,7 @@
 #' terms = c("Intercept", "unemp", "pubC")
 #' svcs = calculate_vcs(gam.svc.mod, terms, data)
 
-calculate_vcs = function(model, terms, input_data = us_grid |> st_drop_geometry()) {
+calculate_vcs = function(model, terms, input_data) {
   n_t = length(terms)
   input_data_copy = input_data
   output_data = input_data
