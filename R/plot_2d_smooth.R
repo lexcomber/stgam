@@ -1,4 +1,4 @@
-#' Plots a 1-Dimensional GAM smooth
+#' Plots a 2-Dimensional GAM smooth
 #'
 #' @param mod a GAM model with smooths created using the `mgcv` package
 #' @param filled `logical` value to indicate whether a filled plot should be created (`TRUE`) or not (`FALSE`)
@@ -6,7 +6,7 @@
 #' @param ncol the number of columns for the compound plot
 #' @param nrow the number of rows for the compound plot
 #'
-#' @return a compound plot of the 1D smooths (rendered using cowplot::plot_grid )
+#' @return a compound plot of the 2D smooths (rendered using cowplot::plot_grid )
 #' @export
 #'
 #' @examples
