@@ -1,9 +1,10 @@
 #' Plots a 1-Dimensional GAM smooth
 #'
-#' @param mod a GAM model with smooths created using the mgcv package
+#' @param mod a GAM model with smooths created using the `mgcv` package
+#' @param filled `logical` value to indicate whether a filled plot should be created (`TRUE`) or not (`FALSE`)
+#' @param outline the name of an `sf` object to be plotted (NULL is the default)
 #' @param ncol the number of columns for the compound plot
 #' @param nrow the number of rows for the compound plot
-#' @param fills the fill colours (single or vector)
 #'
 #' @return a compound plot of the 1D smooths (rendered using cowplot::plot_grid )
 #' @export
@@ -14,11 +15,11 @@
 #' library(cowplot)
 #' set.seed(2) ## simulate some data...
 #' dat <- gamSim(1,n=400,dist="normal",scale=2)
+#' # use x1 and x2 as the coordinates
 #' b <- gam(y~s(x0, x1, bs = 'gp', by = x2),data=dat)
-#' b <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat)
 #' plot_2d_smooth(b, filled = T)
 
-plot_2d_smooth = function(mod = b, filled = F, outline =  NULL, ncol = NULL, nrow = NULL) {
+plot_2d_smooth = function(mod, filled = F, outline =  NULL, ncol = NULL, nrow = NULL) {
   pdf(file = NULL)        # dummy PDF
   smooths <- plot(mod, page = 1)  # call the plot
   dev.off()               # close the dummy plot
