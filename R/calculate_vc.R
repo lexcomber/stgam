@@ -8,7 +8,7 @@
 #' @export
 #'
 #' @examples
-#' library(tidyverse)
+#' library(dplyr)
 #' library(mgcv)
 #' # SVC
 #' data(productivity)

@@ -9,9 +9,9 @@
 #' @export
 #'
 #' @examples
-#' library(mgcv)
-#' library(tidyverse)
-#' library(cowplot)
+#' #library(mgcv)
+#' #library(tidyverse)
+#' #library(cowplot)
 #' # 1. from the `mgcv` `gam` function help
 #' set.seed(2) ## simulate some data...
 #' dat <- gamSim(1,n=400,dist="normal",scale=2)

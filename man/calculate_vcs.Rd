@@ -4,7 +4,7 @@
 \alias{calculate_vcs}
 \title{Extracts varying coefficient estimates (for SVC, TVC and STVC)}
 \usage{
-calculate_vcs(model, terms, input_data = st_drop_geometry(us_grid))
+calculate_vcs(model, terms, input_data)
 }
 \arguments{
 \item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names pf the variables in  \code{input_data} )}
@@ -20,7 +20,7 @@ a \code{data.frame} of the input data and the coefficient and standard error est
 Extracts varying coefficient estimates (for SVC, TVC and STVC)
 }
 \examples{
-library(tidyverse)
+library(dplyr)
 library(mgcv)
 # SVC
 data(productivity)

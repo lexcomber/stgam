@@ -31,8 +31,13 @@ Undertake undertake coefficient averaging using Bayesian Model Avergaing (BMA), 
 }
 \examples{
 library(cols4all)
-library(tidyverse)
+library(dplyr)
 library(sf)
+library(glue)
+library(purrr)
+library(mgcv)
+library(sf)
+library(ggplot2)
 # data
 data(productivity)
 data = productivity |> filter(year == "1970") |> mutate(Intercept = 1)
@@ -41,7 +46,7 @@ svc_res_gam = evaluate_models(data, STVC = FALSE)
 # determine their probabilities
 mod_comp_svc <- gam_model_probs(svc_res_gam)
 # combine the model coefficients
-svc_bma <- do_bma(mod_comp_svc, relative = F, data = data)
+svc_bma <- do_bma(mod_comp_svc, relative = FALSE, data = data)
 head(svc_bma)
 # join back to spatial layer
 data(us_data)

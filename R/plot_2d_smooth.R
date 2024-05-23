@@ -10,9 +10,10 @@
 #' @export
 #'
 #' @examples
-#' library(mgcv)
-#' library(tidyverse)
-#' library(cowplot)
+#' #library(mgcv)
+#' #library(tidyverse)
+#' #library(metR)
+#' #library(cowplot)
 #' set.seed(2) ## simulate some data...
 #' dat <- gamSim(1,n=400,dist="normal",scale=2)
 #' # use x1 and x2 as the coordinates

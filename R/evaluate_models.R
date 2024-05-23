@@ -12,6 +12,7 @@
 #' @export
 #'
 #' @examples
+#' library(dplyr)
 #' library(glue)
 #' library(purrr)
 #' library(doParallel)

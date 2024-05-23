@@ -7,7 +7,7 @@
 #' @export
 #'
 #' @examples
-#' library(tidyverse)
+#' #library(tidyverse)
 #' data(productivity)
 #' data = productivity |> filter(year == "1970")
 #' svc_res_gam = evaluate_models(data, STVC = FALSE)

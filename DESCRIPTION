@@ -21,3 +21,13 @@ BugReports: https://github.com/lexcomber/stgam/issues
 Depends: 
     R (>= 2.10)
 LazyData: true
+Imports: 
+    cols4all,
+    doParallel,
+    dplyr,
+    ggplot2,
+    glue,
+    metR,
+    mgcv,
+    purrr,
+    sf
