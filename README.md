@@ -22,16 +22,22 @@ remotes::install_github("lexcomber/stgam", build_vignettes = TRUE, force = T)
 
 This code below loads the package and the package Imports (these have not been set as dependencies). It then undertakes and evaluates a series of spatially varying coefficient models using GAMs with GP smooths:
 
-```{r}
+```{r eval = F}
 library(stgam)
-library(dplyr)
-library(glue)
-library(purrr)
-library(doParallel)
-library(mgcv)
+library(cols4all)   # for nice shading in graphs and maps
+library(cowplot)    # for managing plots
+library(dplyr)      # for data manipulation 
+library(ggplot2)    # for plotting and mapping
+library(glue)       # for model construction 
+library(mgcv)       # for GAMs
+library(sf)         # for spatial data
+library(doParallel) # for parallelising operations
+library(purrr)      # for model construction
+library(tidyr)      # for model construction 
+
 data("productivity")
 data = productivity |> filter(year == "1970")
-# create mltiple models with different forms
+# create multiple models with different forms
 svc_gam =
   evaluate_models(data = data,target_var = "privC", 
           covariates = c("unemp", "pubC"),
@@ -39,9 +45,9 @@ svc_gam =
           coords_y = "Y",
           STVC = FALSE)
 # examine
-head(svc_res_gam)
-# calulate the probabailities for each model 
-mod_comp_svc <- gam_model_probs(svc_res_gam, n = 10)
+head(svc_gam)
+# calculate the probabilities for each model 
+mod_comp_svc <- gam_model_probs(svc_gam, n = 10)
 # have a look
 mod_comp_svc|> select(-f)
 ```

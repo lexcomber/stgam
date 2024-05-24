@@ -44,14 +44,16 @@ The code below loads the packages and data:
 ```{r, warning=F, message=F}
 # load the packages
 library(stgam)
-library(dplyr)      # for data manipulation 
-library(tidyr)      # for data manipulation 
-library(ggplot2)    # for plotting and mapping
-library(sf)         # for spatial data
-library(mgcv)       # for GAMs
 library(cols4all)   # for nice shading in graphs and maps
 library(cowplot)    # for managing plots
-library(doParallel) # for parallel processing 
+library(dplyr)      # for data manipulation 
+library(ggplot2)    # for plotting and mapping
+library(glue)       # for model construction 
+library(mgcv)       # for GAMs
+library(sf)         # for spatial data
+library(doParallel) # for parallelising operations
+library(purrr)      # for model construction
+library(tidyr)      # for model construction 
 # load the data 
 data(productivity)
 data(us_data) 
@@ -93,8 +95,6 @@ terms_gr |> slice_sample(n = 6)
 
 A function is defined to create the equations: here this is bespoke to the covariate names and number in the `productvity` data:
 ```{r}
-library(glue)
-library(purrr)
 # define a function to make the equations
 makeform_prod <- function(intcp, unemp, pubC, bs='gp') {
   #coords <- 	c("X,Y", 	"X2,Y2")[coords]
@@ -278,6 +278,7 @@ For the SVC models, the results indicate that 5 models are highly likely (greate
 
 If only one model was highly probable, then this could be specified. The code below does this for the top SVC model:  
 ```{r eval = F}
+productivity <- productivity |> mutate(Intercept = 1)
 f = as.formula(svc_mods$f[1])
 svc.gam = gam(f, data = productivity |> filter(year == "1970"))
 summary(svc.gam)
