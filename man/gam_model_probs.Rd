@@ -25,7 +25,7 @@ library(mgcv)
 data(productivity)
 data = productivity |> filter(year == "1970")
 svc_res_gam = evaluate_models(data, STVC = FALSE)
-mod_comp_svc <- gam_model_probs(svc_res_gam)
+mod_comp_svc <- gam_model_probs(svc_res_gam, n = 10)
 # print out the terms
 mod_comp_svc|> select(-f)
 }
