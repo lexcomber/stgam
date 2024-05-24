@@ -146,7 +146,7 @@ do_gam(100)
 ```
 
 Finally, this can be put in a loop to evaluate all of the potential space-time models:
-```{r dogam, eval = T, cache = T}
+```{r dogam, eval = T}
 t1 = Sys.time()
 res_gam <- NULL 
 for(i in 1:nrow(terms_gr)) {
@@ -156,7 +156,7 @@ for(i in 1:nrow(terms_gr)) {
 Sys.time() - t1
 ```
 For more complex problems, you could parallelise the loop if you have a large multivariate analyses. The output is the same as the `for` loop above, it is just created more quickly. 
-```{r dogam2, cache = T, eval = F, warning=F, message=F}
+```{r dogam2, eval = F, warning=F, message=F}
 # set up the parallelisation
 library(doParallel)  
 cl <- makeCluster(detectCores()-1)
@@ -231,7 +231,7 @@ The process above had a number of stages:
 
 The `stgam` package has generic function that wrap these operations and the code below applies them to the STVC problem. The `evaluate_models` function creates and evaluates the different models (it may take a minute to run):
 
-```{r evalmods, cache = T}
+```{r evalmods}
 stvc_res_gam = evaluate_models(data = productivity, 
                                target_var = "privC",
                                covariates = c("unemp", "pubC"),
@@ -262,7 +262,7 @@ Of particular interest are the forms of the covariates in in each high ranking m
 We should expect to see these trends when the models are averaged. Note, also the function has here calculated the *relative probabilities* for the STVC models because the individual BIC values resulted in probabilities that were too close to zero to be machine encodable. 
 
 The functions can be applied to a SVC problem:
-```{r evalmods2, cache = T}
+```{r evalmods2}
 svc_res_gam = evaluate_models(data = productivity |> filter(year == "1970"), 
                               target_var = "privC",
                               covariates = c("unemp", "pubC"),
@@ -287,7 +287,7 @@ summary(svc.gam)
 
 For both the SVC and STVC cases, a number of models were highly probable. It is possible to combine these models using the probabilities as weights combine (average) the coefficient estimates, under a Bayesian Model Averaging approach (see @comber2024gtgpjgis for details). The code below applies the `do_bma` function to the summary tables generated above. The code can be used to construct the BMA coefficients from absolute or relative probabilities. 
 
-```{r dobma, cache = T}
+```{r dobma}
 # SVC with absolute probabilities
 svc_bma <- do_bma(model_table = svc_mods, 
                   terms = c("Intercept", "unemp", "pubC"),
