@@ -1,0 +1,336 @@
+---
+title: "Introduction to space-time GAMS with `stgam`"
+author: "Lex Comber"
+date: "May 2023"
+output: rmarkdown::html_vignette
+bibliography: vignette.bib
+
+vignette: >
+  %\VignetteIndexEntry{Introduction to space-time GAMS with `stgam`}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  options(width = 90)
+)
+```
+
+## Overview
+
+The aim of this vignette is provide an introduction to the `stgam` package and demonstrates how to construct a spatially vary coefficient (SVC) model and spatial and  temporally varying (STVC) model using the `stgam` package. Essentially `stgam` provides a wrapper for constructing GAMs with Gaussian Process (GP) smooths or splines, that are parameterised with location for SVCs and with location and time for STVCs. The key ideas underpinning the development of SVCs with GAMs in the `stgam` package and this vignettte are:
+
+1. Standard linear regression assumes that predictor-to-response relationships to be the same throughout the study area. 
+2. This is often not the case when when location is considered, for example of outliers.  
+3. Many geographic processes have a Gaussian form when they are examined over 2-dimensional space, as they essentially exhibit distance decay. 
+3. The GAMs can include smooths or splines of different forms. One such form is a Gaussian Process (GP) spline. 
+4. GP splines can be specified to model non-linearity (wiggliness) over geographic space if location is included with the covariate.
+5. A GAM with GP splines parameterised by location - a Geographic GP GAM or GGP-GAM - defines a spatially varying coefficient (SVC) model 
+6. This can be extended to time and space-time
+
+The approach is presented in outline below, but detail of the SVCs, TVCs and STVCs constructed using GAMs with GP smooths, and the evolution of their application from spatial models to space-time coefficient modelling can be found in @comber2024multiscale and @comber2024gtgpjgis. In this, the concept of a Gaussian Process [@Wood2020] is important in the context of regression modelling. It provides a *data model* of the likelihood that a given data set is generated given a statistical model involving some unknown parameters and in regression modelling, the unknown parameters are the regression parameters. These are described formally in @comber2024multiscale and @comber2024gtgpjgis. 
+
+One final comment is that in this vignette you will all of the varying coefficient models you create assume that spatial, temporal or spatio-temporal dependencies are present in the data. This may not be the case and these assumptions are examined in detail in the second vignette in the `stgam` package. 
+
+In this vignette you will:
+
+- Create and interpret a simple SVC using GAMs with GP smooths.
+- Create and interpret a simple TVC GAM.
+- Extend this to a GP GAM that includes both space and time in smooths to define a STVC model.
+- Be encourages to reflect on how space and time interact and the assumptions embedded in the model specification. 
+Be warned! the Vignette only uses one function from the `stgam` package! 
+
+## Data and Packagees
+
+You should install the `stgam` package:
+
+```{r eval = F}
+remotes::install_github("lexcomber/stgam")
+```
+
+And then make sure the required packages and data are loaded:
+
+```{r, warning=F, message=F}
+# load the packages
+library(stgam)
+library(tidyverse)
+library(sf)
+library(mgcv)       # for GAMs
+library(cols4all)   # for nice shading in graphs and maps
+library(cowplot)    # for managing plots
+# load the data 
+data(productivity)
+data(us_data) 
+```
+
+The `productivity` data is annual economic productivity data for the 48 contiguous US states (with Washington DC merged into Maryland), for years 1970 to 1985 (17 years). This was extracted from the `plm` package [@croissant2022plm]. The `us_data` is a spatial dataset of the US states in a USA Contiguous Equidistant Conic projection (ESRI:102005) from the `spData` package [@bivand2019spdata]. The `productivity` data includes locational information of the state geometric centroid  in the same projection.  The code below maps the `X` and `Y` locations in `productivity` along with the US state areas.
+
+```{r locationplot, message = F, warning=F, fig.height = 4, fig.width = 7, fig.cap = "The US States and the geoemtric centroids used as locations."}
+library(stgam)
+library(tidyverse)
+library(sf)
+ggplot() +  geom_sf(data = us_data, fill = NA) +
+  geom_point(data = productivity |> filter(year == "1970"), aes(x = X, y = Y)) +
+  theme_bw() + ylab("") + xlab("")
+```
+
+The data attributes can be examined and a spatial model of constructed using `gam` function from the `mgcv` package. The varying coefficient models created below all focus on Private capital stock (`privC`) as the target variable, with Unemployment (`unemp`) and Public capital (`pubC`) covariates, where the coefficient functions are assumed to be realisation of a Gaussian Process (GP) introduced above. 
+```{r}
+head(productivity)
+```
+
+## A simple SVC 
+
+A spatially varying coefficient model will be created using the `productivity` dataset. 
+
+The code below defines an intercept column (`Intercept`) in the data. This to allow the intercept to be treated as an addressable term in the model. It also defines parametric and non-parametric forms for the intercept and each covariate, so that they can can take a global form (i.e. as in a standard OLS regression) and a spatially varying form in the GP smooth. 
+
+```{r}
+# define intercept term
+productivity <- productivity |> mutate(Intercept = 1)
+# create the SVC
+svc.gam = gam(privC ~ 0 +
+                Intercept   + s(X, Y, bs = 'gp', by = Intercept) + 
+                unemp + s(X, Y, bs = "gp", by = unemp) + 
+                pubC  + s(X, Y, bs = "gp", by = pubC), 
+              data = productivity |> filter(year == "1970"))
+```
+Notice the  `0 +` in the model. This indicates that the intercept coefficient is not included implicitly and it is included explicitly as `Intercept`. Also notice the different form of the splines from those specified in Part 1. Here, for each covariate, a GP smooth is specified for `X` and `Y` (the coordinates in geographic space) and the covariate is included via the `by` parameter. This is to explore the interaction of the covariate with the target variable over the space defined by `X` and `Y` locations, allowing spatially varying coefficients to be generated. The model has 4 key terms specified in the same way by `<VAR> + (X, Y, b s= 'gp', by = <VAR>)`:
+
+- the `<VAR>` is the fixed parametric term for the covariate
+- `s(...)` defines the smooth
+- `bs = 'gp'` states that this is a GP smooth
+- `by = <VAR>` suggests the GP should be multiplied by variable  
+
+The model output can be assessed: the `k'` and  `edf` parameters are quite close, but the p-values are high and and the `k-index` is greater than 1 so this looks OK. The diagnostic plots are again generated by the `gam.check` function as in Figure \@ref(fig:ch2gamcheck):
+
+```{r ch2gamcheck, fig.height = 7, fig.width = 7, fig.cap = "The GAM GP SVC diagnostic plots."}
+# check 
+gam.check(svc.gam)
+# model summary
+summary(svc.gam)
+```
+
+Here it can be seen that 
+
+1. the model is well tuned: all of the all effective degrees of freedom (`edf` are well below `k` in the `gam.check()` printed output (the `k-index<1` issue is not important because of this) 
+1. all of the the fixed parametric terms are significant 
+1. of the smooth terms, only `pccap` is locally significant and spatially varying.
+
+The spatially varying coefficient estimates can be extracted using `predict`. To do this a dummy data set is created with the `pubC` term set to 1, and the intersect and `unemp` terms set to zero. The result is that the predicted values for the coefficient estimate are just a function of $\beta_2$, the `pubC` coefficient estimate at each location.
+
+```{r}
+get_b2<- productivity |> filter(year == "1970") |> mutate(Intercept = 0, unemp = 0, pubC = 1)
+res <- productivity |> filter(year == "1970") |> 
+  mutate(b2 = predict(svc.gam, newdata = get_b2))
+```
+
+The resulting `data.frame` called `res` has a new variable called `b2` which is the spatially varying coefficient estimate for `pubC`. For comparison, we can generate the spatially varying coefficient estimate for the intercept ($\beta_0$) and `unemp` $\beta_1$ (which were not found to be significant locally) in the same way by setting the other terms in the model to zero: 
+
+```{r}
+get_b0 <- productivity |> filter(year == "1970") |> mutate(Intercept = 1, unemp = 0, pubC = 0)
+res <- res |> mutate(b0 = predict(svc.gam, newdata = get_b0))
+get_b1 <- productivity |> filter(year == "1970") |> mutate(Intercept = 0, unemp = 1, pubC = 0)
+res <- res |> mutate(b1 = predict(svc.gam, newdata = get_b1))
+```
+
+So `res` has the records for the year 1970 and three new columns for `b0`, `b1` and `b2` The distribution of the spatially varying coefficient estimates can be examined: 
+
+```{r eval = T}
+res |> select(b0, b1, b2) |>
+  apply(2, summary) |> round(2)
+```
+
+The `stgam` package has a function to extract the varying coefficients, `calculate_vcs`. This takes three arguments, the GAM varying coefficient model, the model terms, and the data used to create the model: 
+```{r}
+terms = c("Intercept", "unemp", "pubC")
+res <-  calculate_vcs(model = svc.gam, 
+                      terms = terms, 
+                      data = productivity |> filter(year == "1970"))
+summary(res[, paste0("b_",terms)])
+```
+
+Standard `dplyr` and `ggplot` approaches can be used to join and map the coefficient estimates, formally $\beta_0$, $\beta_1$ and $\beta_2$) as in the figure below. Notice the North-South trend for the Intercept and the East-West and trend for Unemployment - both insignificant predictors of `privC` - and a much stronger specific spatial pattern between the target variable and Public capital (`pubC`), with particularity high coefficient estimates in the south.   
+
+```{r ch2svccoefs, fig.height = 7, fig.width = 7, fig.cap = "The spatially varying coefficient (SVC) estimates."}
+# join the data 
+map_results <-
+  us_data |> left_join(res |> select(GEOID, b_Intercept, b_unemp, b_pubC), by = "GEOID")
+# plot the insignificant coefficient estimates
+tit =expression(paste(""*beta[0]*""))
+p1 <- 
+  ggplot(data = map_results, aes(fill=b_Intercept)) + 
+  geom_sf() + 
+  scale_fill_continuous_c4a_div(palette="brewer.spectral",name=tit) + 
+  coord_sf() +
+  ggtitle("Intercept: not significant")
+tit =expression(paste(""*beta[1]*""))
+p2 <- 
+  ggplot(data = map_results, aes(fill=b_unemp)) + 
+  geom_sf() + 
+  scale_fill_continuous_c4a_div(palette="brewer.spectral",name=tit) + 
+  coord_sf() +
+  ggtitle("Unemployment: not significant")
+# plot the significant pubC coefficient estimates
+tit =expression(paste(""*beta[2]*" "))
+p3 <- 
+  ggplot(data = map_results, aes(fill=b_pubC)) + 
+  geom_sf() + 
+  scale_fill_continuous_c4a_div(palette="brewer.prgn",name=tit) + 
+  coord_sf() +
+  ggtitle("Public captial: significant")
+plot_grid(p1, p2, p3, ncol = 1)
+```
+
+
+
+## A simple TVC
+
+The `productivity` data was filtered for 1970 the the SVC above in which the `X-Y` location of the 48 states was used to parametrise the Gaussian Process smooths. The same structure can be used to create a temporally vary coefficient model (TVC), with smooths specified to include the `year` parameter, but this time not restricting the analysis data to records from a single year:
+```{r}
+# create the TVC
+tvc.gam = gam(privC ~ 0 +
+                Intercept   + s(year, bs = 'gp', by = Intercept) + 
+                unemp + s(year, bs = "gp", by = unemp) + 
+                pubC  + s(year, bs = "gp", by = pubC), 
+              data = productivity)
+```
+
+The model can be inspected in the same way to examine the the `k'` and  `edf` parameters using the `gam.check` function and again there are no concerns:
+
+```{r eval = F}
+gam.check(tvc.gam)
+summary(tvc.gam)
+```
+The model summary indicates that all of the parametric and temporally vary coefficients are significant at the 95% level except the parametric one for Unemployment, but there are some interesting patterns in the residuals, as reflected in the diagnostics plots above and the model fit ($R^2$) value.
+
+The temporally varying coefficients can be extracted in the same way as the DVC approach, explored using the `predict` function and setting each of the covariates to 1 and the others to zero in turn:
+
+```{r}
+terms = c("Intercept", "unemp", "pubC")
+res <-  calculate_vcs(model = tvc.gam, 
+                      terms = terms, 
+                      data = productivity)
+summary(res[, paste0("b_",terms)])
+```
+The variation in coefficient estimates can be inspected over time, remembering that each State has the same coefficient estimate value for each year, so just one state is selected in the code below (you could chose another and the result would be the same). Notice the linear declines due to the linearity of the time covariate in the figure below.   
+
+```{r ch2tvccoefs, eval = T, echo = T, fig.height = 3, fig.width = 7, message=F, warning=F, fig.cap = "Trends in the temporally varying coefficient estimates."}
+res |> 
+  filter(state == "ARIZONA") |> 
+  select(year, b_Intercept, b_unemp, b_pubC) %>% 
+  pivot_longer(-year) %>% 
+  ggplot(aes(x = year, y = value)) +
+  geom_point() + geom_line() +
+  facet_wrap(~name, scale = "free") +
+  theme_bw() + xlab("Year") + ylab("") 
+```
+
+## Spatially and Temporally Varying Coefficient (STVC) models
+
+We can combine space and time in GAM GP splines. But how? We could use separate smooths for location and for time, or a single, 3D smooth parameterised with both location and time. There are assumptions associated with each of these. The code below specifies the interaction of the covariates within a single space-time GP smooth. You will notice this takes a few seconds longer to run, and choice of how to specify the smooths is explored in the second vignette in the `stgam` package. 
+
+```{r}
+stvc.gam = gam(privC ~ 0 +
+                 Intercept   + s(X, Y, year, bs = 'gp', by = Intercept) + 
+                 unemp + s(X, Y, year, bs = "gp", by = unemp) + 
+                 pubC  + s(X, Y, year, bs = "gp", by = pubC), 
+               data = productivity)
+```
+
+The model can be inspected in the usual way using the `gam.check` function (again, no concerns) and the `summary` function with $k$ and $edf$ despite the concerning `k-index` and `p-value` values. In this case all of the parametric and smooth coefficient estimates are significant at the 95% level, and the model fit ($R^2$) has again increased over the SVC model.
+ 
+```{r eval = F}
+gam.check(stvc.gam)
+summary(stvc.gam)
+```
+
+The coefficients spatial and temporally vary coefficients can be extracted in the same way as before and the variation in coefficient estimates from the STVC-GAM model summarised: 
+```{r}
+terms = c("Intercept", "unemp", "pubC")
+res <-  calculate_vcs(model = stvc.gam, 
+                      terms = terms, 
+                      data = productivity)
+summary(res[, paste0("b_",terms)])
+```
+
+This indicates that a positive relationship between Private capital with with Public capital and mixed positive and negative one with Unemployment and the Intercept. 
+
+It is instructive to unpick some of the model coefficients in more detail and the code below summarises variations over time through the median values of each coefficient estimate:
+
+```{r eval = T}
+res |> 
+  select(year, b_Intercept, b_unemp, b_pubC) |>
+  group_by(year) |>
+  summarise(med_b0 = median(b_Intercept),
+            med_b1 = median(b_unemp),
+            med_b2 = median(b_pubC))
+```
+It is evident that of the 2 covariates and the intercept used to model Private capital, only Public capital (`b2`) varies (increases) over time. This increase is shown visually below .   
+
+```{r ch2stvccoefsbox, echo = T, fig.height = 4, fig.width = 7, fig.cap = "The temporal variation of the Public capital coefficient estimates over 17 years.", fig.pos = 'h'}
+# inputs to plot
+res |> select(starts_with("b"), year) |> 
+  mutate(year = "All Years") -> tmp
+cols = c(c4a("tableau.red_gold", n = 17, reverse = T), "grey")
+tit =expression(paste(""*beta[`Private Capital`]*""))
+# plot
+res |> select(starts_with("b"), year) |> 
+  rbind(tmp) |> 
+  mutate(year = factor(year)) |> 
+  ggplot(aes(y = year, x = b_pubC, fill = year)) +
+  geom_boxplot(outlier.alpha = 0.1) +
+  scale_fill_manual(values=cols, guide = "none") +
+  theme_bw() + xlab(tit) + ylab("Time") 
+```
+
+The spatial pattern of this temporal trend can also be explored as below. This shows that the increasing intensity of the effect of Public capital on Private capital does not vary spatially: the increase in effect is spatially even, with high values in the south. 
+
+```{r, ch2stvccoefsmap, message = F, warning = F, fig.height = 4, fig.width = 7, fig.cap = "The spatial variation of the Unemployment coefficient estimates over time."}
+tit =expression(paste(""*beta[`Public Capital`]*""))
+# join the data 
+map_results <-
+  us_data |> left_join(res |> select(GEOID, year, b_Intercept, b_unemp, b_pubC), by = "GEOID")
+# create the plot
+map_results |>
+  ggplot() + geom_sf(aes(fill = b_pubC), col = NA) +
+	scale_fill_binned_c4a_seq(palette="scico.lajolla", name = tit) + 
+  facet_wrap(~year) +
+	theme_bw() + xlab("") + ylab("") + 
+	theme(
+	  strip.background =element_rect(fill="white"), 
+	  strip.text = element_text(size = 8, margin = margin()),
+	  legend.position = "inside", legend.position.inside = c(0.7, 0.1),
+	  legend.direction = "horizontal",
+	  legend.key.width = unit(1, "cm"),
+		axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), 
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())  
+```
+
+## Summary
+
+The rationale for using GAMs with GP splines for spatially varying coefficient (SVC) or temporally varying coefficient (TVC) models is as follows: 
+
+- GAMs with splines or smooths capture non-linear relationships between the response variable and covariates.
+- splines generate a varying coefficient model when they are parameterised with more than one variable. 
+- this is readily extending to the temporal and / or spatial dimensions to generate SVCs, TVCs and STVCs.
+- different splines are available, but GP splines reflect Tobler's First Law of Geography (spatial autocorrelation, process spatial heterogeneity, etc).
+- this can be extended to the temporal case on the assumption of temporal decay (similarity decreases over time).
+- GAMs are robust, have a rich theoretical background and been subject to much development.
+
+Initial research has demonstrated the formulation and application of a GAM with GP splines calibrated via observation location as a multiscale SVC model: the Geographical Gaussian Process GAM (GGP-GAM) [@comber2024multiscale]. The GGP-GAM was compared with the most popular SVC model, Geographically Weighted Regression (GWR) [@brunsdon1996geographically] and shown to out-perform Multiscale GWR. 
+
+However, when handling space *and* time, simply plugging all the space time data into specific GAM configuration is to make potentially unreasonable assumptions about how space and time interact in spatially and temporally varying coefficient (STVC) models. To address this workshop has suggested that the full set of models is investigated to identify the best model or the best set of models. Where there is a clear winner, this can be applied. Where these is not, as in the example used then the model coefficients can be combined using Bayesian Model Averaging.
+
+
+## References
+
+
+
