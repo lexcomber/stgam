@@ -56,13 +56,16 @@ And then make sure the required packages and data are loaded:
 ```{r, warning=F, message=F}
 # load the packages
 library(stgam)
-library(dplyr)      # for data manipulation 
-library(tidyr)      # for data manipulation 
-library(ggplot2)    # for plotting and mapping
-library(sf)         # for spatial data
-library(mgcv)       # for GAMs
 library(cols4all)   # for nice shading in graphs and maps
 library(cowplot)    # for managing plots
+library(dplyr)      # for data manipulation 
+library(ggplot2)    # for plotting and mapping
+library(glue)       # for model construction 
+library(mgcv)       # for GAMs
+library(sf)         # for spatial data
+library(doParallel) # for parallelising operations
+library(purrr)      # for model construction
+library(tidyr)      # for model construction 
 # load the data 
 data(productivity)
 data(us_data) 
