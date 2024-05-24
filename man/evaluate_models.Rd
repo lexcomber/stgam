@@ -10,7 +10,7 @@ evaluate_models(
   covariates = c("unemp", "pubC"),
   coords_x = "X",
   coords_y = "Y",
-  STVC = TRUE,
+  STVC = FALSE,
   time_var = NULL
 )
 }
@@ -43,6 +43,12 @@ library(doParallel)
 library(mgcv)
 data(productivity)
 data = productivity |> filter(year == "1970")
-svc_res_gam = evaluate_models(data, STVC = FALSE)
+svc_res_gam =
+  evaluate_models(data = data,
+    target_var = "privC",
+    covariates = c("unemp", "pubC"),
+    coords_x = "X",
+    coords_y = "Y",
+    STVC = FALSE)
 head(svc_res_gam)
 }
