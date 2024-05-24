@@ -56,7 +56,9 @@ And then make sure the required packages and data are loaded:
 ```{r, warning=F, message=F}
 # load the packages
 library(stgam)
-library(tidyverse)  # for data manipulation and plotting
+library(dplyr)      # for data manipulation 
+library(tidyr)      # for data manipulation 
+library(ggplot2)    # for plotting and mapping
 library(sf)         # for spatial data
 library(mgcv)       # for GAMs
 library(cols4all)   # for nice shading in graphs and maps
@@ -69,9 +71,6 @@ data(us_data)
 The `productivity` data is annual economic productivity data for the 48 contiguous US states (with Washington DC merged into Maryland), for years 1970 to 1985 (17 years). This was extracted from the `plm` package [@croissant2022plm]. The `us_data` is a spatial dataset of the US states in a USA Contiguous Equidistant Conic projection (ESRI:102005) from the `spData` package [@bivand2019spdata]. The `productivity` data includes locational information of the state geometric centroid  in the same projection.  The code below maps the `X` and `Y` locations in `productivity` along with the US state areas.
 
 ```{r locationplot, message = F, warning=F, fig.height = 4, fig.width = 7, fig.cap = "The US States and the geoemtric centroids used as locations."}
-library(stgam)
-library(tidyverse)
-library(sf)
 ggplot() +  geom_sf(data = us_data, fill = NA) +
   geom_point(data = productivity |> filter(year == "1970"), aes(x = X, y = Y)) +
   theme_bw() + ylab("") + xlab("")
@@ -185,8 +184,6 @@ p3 <-
 plot_grid(p1, p2, p3, ncol = 1)
 ```
 
-
-
 ## A simple TVC
 
 The `productivity` data was filtered for 1970 the the SVC above in which the `X-Y` location of the 48 states was used to parametrise the Gaussian Process smooths. The same structure can be used to create a temporally vary coefficient model (TVC), with smooths specified to include the `year` parameter, but this time not restricting the analysis data to records from a single year:
@@ -221,8 +218,8 @@ The variation in coefficient estimates can be inspected over time, remembering t
 ```{r ch2tvccoefs, eval = T, echo = T, fig.height = 3, fig.width = 7, message=F, warning=F, fig.cap = "Trends in the temporally varying coefficient estimates."}
 res |> 
   filter(state == "ARIZONA") |> 
-  select(year, b_Intercept, b_unemp, b_pubC) %>% 
-  pivot_longer(-year) %>% 
+  select(year, b_Intercept, b_unemp, b_pubC) |> 
+  pivot_longer(-year) |>
   ggplot(aes(x = year, y = value)) +
   geom_point() + geom_line() +
   facet_wrap(~name, scale = "free") +

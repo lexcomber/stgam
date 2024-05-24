@@ -33,5 +33,6 @@ Imports:
     metR,
     mgcv,
     purrr,
-    sf
+    sf,
+    tidyr
 VignetteBuilder: knitr

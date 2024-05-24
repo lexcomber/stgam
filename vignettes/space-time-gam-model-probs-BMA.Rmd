@@ -44,7 +44,9 @@ The code below loads the packages and data:
 ```{r, warning=F, message=F}
 # load the packages
 library(stgam)
-library(tidyverse)  # for data manipulation and plotting
+library(dplyr)      # for data manipulation 
+library(tidyr)      # for data manipulation 
+library(ggplot2)    # for plotting and mapping
 library(sf)         # for spatial data
 library(mgcv)       # for GAMs
 library(cols4all)   # for nice shading in graphs and maps
