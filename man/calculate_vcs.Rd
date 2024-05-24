@@ -4,14 +4,14 @@
 \alias{calculate_vcs}
 \title{Extracts varying coefficient estimates (for SVC, TVC and STVC)}
 \usage{
-calculate_vcs(model, terms, input_data)
+calculate_vcs(model, terms, data)
 }
 \arguments{
 \item{model}{a GAM model with smooths created using the \code{mgcv} package}
 
-\item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names pf the variables in  \code{input_data} )}
+\item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in \code{data} )}
 
-\item{input_data}{the data used to create the GAM model, \code{data.frame} or \code{tibble} format}
+\item{data}{the data used to create the GAM model, \code{data.frame} or \code{tibble} format}
 }
 \value{
 a \code{data.frame} of the input data and the coefficient and standard error estimates for each covariate
