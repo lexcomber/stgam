@@ -19,17 +19,23 @@
 #' library(mgcv)
 #' data(productivity)
 #' data = productivity |> filter(year == "1970")
-#' svc_res_gam = evaluate_models(data, STVC = FALSE)
+#' svc_res_gam =
+#'   evaluate_models(data = data,
+#'     target_var = "privC",
+#'     covariates = c("unemp", "pubC"),
+#'     coords_x = "X",
+#'     coords_y = "Y",
+#'     STVC = FALSE)
 #' head(svc_res_gam)
 evaluate_models = function(data,
                            target_var = "privC",
                            covariates = c("unemp", "pubC"),
                            coords_x = "X",
                            coords_y = "Y",
-                           STVC = TRUE,
+                           STVC = FALSE,
                            time_var = NULL) {
   # Helper functions
-  # 4.1 intercept formula
+  # 1 intercept formula
   get_form_intercept = function(index, bs = "gp") {
     c("",
       glue("+s({coords_x},{coords_y},bs='{bs}',by=Intercept)"),
@@ -39,7 +45,7 @@ evaluate_models = function(data,
   }
   # get_form_intercept(3)
 
-  # 4.2 covariate formula
+  # 2 covariate formula
   get_form_covariate = function(varname, index, bs = "gp") {
     c("",
       glue("+ {varname}"),
@@ -50,7 +56,7 @@ evaluate_models = function(data,
   }
   # get_form_covariate("unemp", 6)
 
-  # 4.3 make combinations grid for SVC and STVC
+  # 3 make combinations grid for SVC and STVC
   make_svc_index_grid = function(covariates) {
     expression_x = "expand.grid(Intercept = 1:2 "
     for (i in covariates) {
@@ -72,7 +78,7 @@ evaluate_models = function(data,
   }
   # make_stvc_index_grid(letters[1:3])
 
-  # 4.4 create the formula
+  # 4 create the formula
   get_formula = function(indices){
     form.i = glue("{target_var}~Intercept-1")
     form.i = paste0(form.i,
@@ -91,7 +97,7 @@ evaluate_models = function(data,
   # indices = unlist(svc_grid[11,])
   # get_formula(indices)
 
-  #  4.5 create and evaluate a GAM
+  # 5 create and evaluate a GAM
   evaluate_gam = function(i, terms_grid, data, ...){
     # make the formula
     indices = unlist(terms_grid[i,])
@@ -102,7 +108,7 @@ evaluate_models = function(data,
     bic = BIC(m)
     # create the indices and formula for output
     index = data.frame(terms_grid[i,])
-    f = paste0('privC ~ ', as.character(f)[3] )
+    f = paste0(target_var, ' ~ ', as.character(f)[3] )
     return(data.frame(index, bic, f))
   }
   if(!STVC) {
