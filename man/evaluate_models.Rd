@@ -41,7 +41,7 @@ library(glue)
 library(purrr)
 library(doParallel)
 library(mgcv)
-data(productivity)
+data("productivity")
 data = productivity |> filter(year == "1970")
 svc_res_gam =
   evaluate_models(data = data,

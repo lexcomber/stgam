@@ -1,0 +1,382 @@
+---
+title: "Determining Space-Time model form and Bayesian Model Avergaing (BMA) with `stgam`"
+author: "Lex Comber"
+date: "May 2023"
+output: rmarkdown::html_vignette
+bibliography: vignette.bib
+vignette: >
+  %\VignetteIndexEntry{Determining Space-Time model form and Bayesian Model Avergaing (BMA) with `stgam`}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  options(width = 90),
+  options(mc.cores=2)
+)
+```
+
+## Overview
+
+The introductory vignette (*'Introduction to space-time GAMS with `stgam`'*) demonstrated how to construct varying coefficient models using GAMs with Gaussian Process smooths (splines). The SVC, TVC and STVC models all had a similar form, with each covariate specified as a fixed parametric term and in space, time or space-time GP smooth. By way of example the SVC model is repeated below, the the TVC and STVC had a specified the covariates and GPs in a similar way.
+
+```{r eval = F}
+stvc.gam = gam(privC ~ 0 +
+                 Intercept   + s(X, Y, year, bs = 'gp', by = Intercept) + 
+                 unemp + s(X, Y, year, bs = "gp", by = unemp) + 
+                 pubC  + s(X, Y, year, bs = "gp", by = pubC), 
+               data = productivity)
+```
+
+The `stvc.gam` model above is specified in a way that assumes the presence of some spatio-temporal dependencies (or interactions) between the target and the predictor variables. However this assumption may be incorrect and the model may be incorrectly specified. 
+
+This vignette 
+
+- Reflects on the assumptions associated with different model forms or specifications. 
+- Constructs different varying coefficient models and evaluates them using BIC.
+- Constructs probabilities to determine the best model or best set of competing models.
+- Undertakes Bayesian Model Averaging to combine the highly probable models.
+
+The code below loads the packages and data:
+```{r, warning=F, message=F}
+# load the packages
+library(stgam)
+library(tidyverse)  # for data manipulation and plotting
+library(sf)         # for spatial data
+library(mgcv)       # for GAMs
+library(cols4all)   # for nice shading in graphs and maps
+library(cowplot)    # for managing plots
+library(doParallel) # for parallel processing 
+# load the data 
+data(productivity)
+data(us_data) 
+```
+
+## Considering model form
+
+How should you specify your varying coefficient model?
+
+The STCV model specified above included space and time in a single smooth (spline) for each the covariates. This is to assume that that spatial and temporal processes *do* interact and that the *temporal trends* in predictor-target variable relationships will *vary with location*. But is this assumption correct? If you have a specific a hypothesis that you are testing or working under a particular theory related to how space and time interact in the process you are examining, then you can simply specify how the covariates interact with target variable. However, more commonly we are seeking inference (understanding) about *how* processes interact in space and time.  
+
+In this vignette, these interactions are explored using a data driven (rather than theoretical) approach. A series of different models are created, each with different assumptions, and they are evaluated to determine which one of them is, or which set of them are, the most probable. 
+
+Multiple models can be created to explore all possible combinations of interaction and then to select the best model, through a probability based measure like BIC (see @comber2024gtgpjgis for a full treatment of this). There are a total 6 possible way that each covariate could be specified in the model:
+
+i. It is omitted.
+ii. It is included as a parametric response with no spline.
+iii. It is included in a spline with location.
+iv. It is included a spline with time.
+v. It is included in a single spline with location and time.
+vi. It is included in 2 separate splines with location and time.
+
+The intercept can be treated similarly, but without it being absent (i.e. 5 options).
+
+To investigate STVC model form, a series of models can be specified, with each combination of the 6 permutations for each covariate, plus 5 states for the intercept. The best model(s) can be determined by quantifying the likelihood (probability) of each of model being the correct model. This can be approximated using the Bayesian Information Criterion (BIC) [@schwarz1978estimating] as described in full in @comber2024gtgpjgis, and if the probabilities for multiple models are high, then the models can be combined using a Bayesian Model Averaging (BMA) approach. BMA is described in the context of spatial modelling in @fragoso2018bayesian and summarised in @brunsdon2023gisci, but in brief, if a number of competing models exist with at least one quantity of interest that all have in common, and the likelihoods of each of them being the correct model is known (e.g. from BIC ), then a posterior distribution of the quantity of interest can be obtained by averaging them using the likelihoods as weights. In this way it allows competing models, treating space and time in different ways, to be combined. 
+
+## Creating multiple models: a walk-through
+
+To create STVC multiple models, the code below first defines a grid of numbers for each covariate form. This is passed to a function to create the formula specifying each model, with different terms and smooths, which in turn is passed to the `gam` function. 
+
+```{r eval = T}
+# define intercept term
+productivity <- productivity |> mutate(Intercept = 1)
+# define grid of combinations (nrow = 180)
+terms_gr = expand.grid(intcp = 1:5, unemp = 1:6, pubC = 1:6) 
+# examine a random slice
+terms_gr |> slice_sample(n = 6)
+```
+
+A function is defined to create the equations: here this is bespoke to the covariate names and number in the `productvity` data:
+```{r}
+library(glue)
+library(purrr)
+# define a function to make the equations
+makeform_prod <- function(intcp, unemp, pubC, bs='gp') {
+  #coords <- 	c("X,Y", 	"X2,Y2")[coords]
+  intx <- c("",
+            glue("+s(year,bs='{bs}',by=Intercept)"), 
+            glue("+s(X,Y,bs='{bs}',by=Intercept)"), 
+            glue("+s(X,Y,bs='{bs}',by=Intercept) + s(year,bs='{bs}',by=Intercept)"), 
+            glue("+s(X,Y,year,bs='{bs}',by=Intercept)"))[intcp]
+  unempx <- c("", 
+              "+ unemp",
+              glue("+s(year,bs='{bs}',by=unemp)"), 	
+              glue("+s(X,Y,bs='{bs}',by=unemp)"), 	
+              glue("+s(X,Y,bs='{bs}',by=unemp) + s(year,bs='{bs}',by=unemp)"),
+              glue("+s(X,Y,year,bs='{bs}',by=unemp)"))[unemp]
+  pubCx <- c("", 
+             "+ pubC",
+             glue("+s(year,bs='{bs}',by=pubC)"),
+             glue("+s(X,Y,bs='{bs}',by=pubC)"),
+             glue("+s(X,Y,bs='{bs}',by=pubC) + s(year,bs='{bs}',by=pubC)"),
+             glue("+s(X,Y,year,bs='{bs}',by=pubC)"))[pubC]
+  return(formula(glue("privC~Intercept-1{unempx}{intx}{pubCx}")))
+}
+```
+To see how this works, the code below passes some numbers to it. 
+```{r}
+makeform_prod(intcp = 5, unemp = 2, pubC = 4, bs='gp')
+```
+Next a function to undertake the analysis and record the BIC, return the indices and the formula is defined. Not that this has the `terms_gr` object defined above embedded in it, taking just an index of the grid row number as input:
+```{r}
+do_gam = function(i){
+  	f <- makeform_prod(intcp = terms_gr$intcp[i],
+  	                 unemp = terms_gr$unemp[i],
+  	                 pubC = terms_gr$pubC[i],
+  	                 bs='gp')
+  	m = gam(f,data=productivity)
+    bic = BIC(m)
+    index = data.frame(intcp = terms_gr$intcp[i],
+                       unemp = terms_gr$unemp[i],
+                       pubC = terms_gr$pubC[i])
+    f = paste0('privC~', as.character(f)[3] )			
+    return(data.frame(index, bic, f))
+    #return(bic)
+}
+```
+This can be tested: 
+```{r eval = F}
+terms_gr[100,]
+do_gam(100)
+```
+
+Finally, this can be put in a loop to evaluate all of the potential space-time models:
+```{r dogam, eval = T, cache = T}
+t1 = Sys.time()
+res_gam <- NULL 
+for(i in 1:nrow(terms_gr)) {
+  res.i = do_gam(i)
+  res_gam = rbind(res_gam, res.i)
+}
+Sys.time() - t1
+```
+For more complex problems, you could parallelise the loop if you have a large multivariate analyses. The output is the same as the `for` loop above, it is just created more quickly. 
+```{r dogam2, cache = T, eval = F, warning=F, message=F}
+# set up the parallelisation
+library(doParallel)  
+cl <- makeCluster(detectCores()-1)
+registerDoParallel(cl)
+# do the parallel loop 
+t1 = Sys.time()
+res_gam <- 
+  foreach(i = 1:nrow(terms_gr),
+          .combine = 'rbind', 
+          .packages = c("glue", "mgcv", "purrr")) %dopar% {
+            do_gam(i)
+            }
+Sys.time() - t1 
+# release the cores
+stopCluster(cl)
+# have a look
+head(res_gam)
+```
+
+## Evaluating multiple models: a walk-through
+
+Having generated STVC multiple models and recorded the BIC values for them, it is possible to generate probabilities for each model and evaluate them. The logics and supporting equations for this evaluations of each mode are detailed in @comber2024gtgpjgis. The results need to be sorted, the best 10 models identified, their structures extracted and then their relative probabilities calculated: 
+```{r}
+# sort the results
+mod_comp <- tibble(
+    res_gam) |>
+    rename(BIC = bic) |>
+    arrange(BIC) 
+# transpose the indices to to model terms 
+# rank and return the top 10 results
+int_terms <- \(x) c("Fixed","s_T", "s_S", "s_T + S_S", "s_ST")[x]
+var_terms <- \(x) c("---", "Fixed","s_T", "s_S", "s_T + s_S", "s_ST")[x]
+mod_comp_tab <- 
+  mod_comp |> 
+  slice_head(n = 10) |> 
+  mutate(across(unemp:pubC,var_terms)) |>
+  mutate(intcp = int_terms(intcp)) |>
+  rename(`Intercept` = intcp,
+         `Unemployment.` = unemp,
+         `Public Captial` = pubC) |>
+  mutate(Rank = 1:n()) |>
+  relocate(Rank) |>
+  select(-f) 
+# determine the relative probabilities 
+# ie relative to the top ranked model
+p1_vec = NULL
+for(i in 2:10) {
+  p1 = exp(-(mod_comp_tab$BIC[i]-mod_comp_tab$BIC[1])/2)
+  p1 = p1/(1+p1)
+  p1_vec = c(p1_vec, p1)
+}
+mod_comp_tab$`Pr(M)` = c("--", paste0(format(round(p1_vec*100, digits=1), nsmall = 1), "%"))
+```
+The results can be examined: 
+```{r eval = T}
+mod_comp_tab
+```
+The results are sorted and suggest that nine of the models are highly probable, each with probabilities of better than the best ranked model of >10%. These are candidates for Bayesian Model Averaging. The are some commonalities in the specification of the 9 models:
+
+- It does not matter whether the Intercept varies over space or time or together either interdependently or simultaneously;
+- Unemployment can be absent, fixed or in a temporal smooth.
+- Public Capital interacts simultaneously over space and time.
+
+
+## Creating and Evaluating multiple models using `stgam` functions
+
+The process above had a number of stages:
+- a grid was defined with indices for each variable defining how it is specified in each model
+- this was used to create formula specifying each variable in different ways
+- each model was constructed and the BIC calculated using a `for` loop or a parallelised approach
+- the probability for each model was determined and the top 10 models returned
+
+The `stgam` package has generic function that wrap these operations and the code below applies them to the STVC problem. The `evaluate_models` function creates and evaluates the different models (it may take a minute to run):
+
+```{r evalmods, cache = T}
+stvc_res_gam = evaluate_models(data = productivity, 
+                               target_var = "privC",
+                               covariates = c("unemp", "pubC"),
+                               coords_x = "X",
+                               coords_y = "Y",
+                               STVC = TRUE,
+                               time_var = "year") 
+```
+
+The results can be compared with the `res_gam` object created earlier:
+```{r eval = F}
+head(res_gam)
+head(stvc_res_gam)
+```
+
+The model probabilities can be extracted using the  `gam_model_probs` function, here again suggesting that nine space time models are equally as probable:
+```{r}
+stvc_mods = gam_model_probs(stvc_res_gam, n = 10)
+stvc_mods
+```
+
+Of particular interest are the forms of the covariates in in each high ranking model: 
+
+- The Intercept is variously in a spatial, temporal, spatial plus temporal or space-time smooth.
+- Unemployment is either absent, fixed or in a temporal smooth.
+- Public capital (`pubC`) is always specified with a space-time smooth.
+
+We should expect to see these trends when the models are averaged. Note, also the function has here calculated the *relative probabilities* for the STVC models because the individual BIC values resulted in probabilities that were too close to zero to be machine encodable. 
+
+The functions can be applied to a SVC problem:
+```{r evalmods2, cache = T}
+svc_res_gam = evaluate_models(data = productivity |> filter(year == "1970"), 
+                              target_var = "privC",
+                              covariates = c("unemp", "pubC"),
+                              coords_x = "X",
+                              coords_y = "Y",
+                              STVC = FALSE,
+                              time_var = NULL) 
+# head(svc_res_gam)
+svc_mods = gam_model_probs(svc_res_gam, n = 10)
+svc_mods
+```
+For the SVC models, the results indicate that 5 models are highly likely (greater than 10% probability) to be the best model, all specifying a Public capital (`pubC`) smooth that varies locally over space, with Unemployment (`unemp`) either removed or globally constant (fixed), and the Intercept either fixed or varying with location. Interesting the SVC model in which all three covariates are specified with a spatial GP smooth (the SVC created in the first vignette) is the 6th ranked model and with a probability of less than 1/1000 of being the correct model. 
+
+If only one model was highly probable, then this could be specified. The code below does this for the top SVC model:  
+```{r eval = F}
+f = as.formula(svc_mods$f[1])
+svc.gam = gam(f, data = productivity |> filter(year == "1970"))
+summary(svc.gam)
+```
+
+## Combining multiple models using Bayesian Model Averaging
+
+For both the SVC and STVC cases, a number of models were highly probable. It is possible to combine these models using the probabilities as weights combine (average) the coefficient estimates, under a Bayesian Model Averaging approach (see @comber2024gtgpjgis for details). The code below applies the `do_bma` function to the summary tables generated above. The code can be used to construct the BMA coefficients from absolute or relative probabilities. 
+
+```{r dobma, cache = T}
+# SVC with absolute probabilities
+svc_bma <- do_bma(model_table = svc_mods, 
+                  terms = c("Intercept", "unemp", "pubC"),
+                  thresh = 0.1,
+                  relative = FALSE, 
+                  data = productivity |> filter(year == "1970"))
+# STVC with relative probabilities
+stvc_bma <- do_bma(model_table = stvc_mods, 
+                  terms = c("Intercept", "unemp", "pubC"),
+                  thresh = 0.1,
+                  relative = TRUE, 
+                  data = productivity)
+```
+
+The results can be joined back to the spatial layer, in this case `us_data` to be mapped: 
+```{r bmamap1, fig.height = 4, fig.width = 7, fig.cap = "The spatial variation of the Public captial generated using a Bayesian Model Avaergaing approach."}
+# join
+svc_bma_sf <-
+  us_data |> select(GEOID) |>
+  left_join(productivity |> 
+              filter(year == "1970") |> select(GEOID, year) |> 
+              cbind(svc_bma)) |>
+  relocate(geometry, .after = last_col())
+#  map
+tit =expression(paste(""*beta[`Public Capital`]*" "))
+ggplot(data = svc_bma_sf, aes(fill=pubC)) +
+  geom_sf() +
+  scale_fill_continuous_c4a_div(palette="brewer.blues",name=tit) +
+  coord_sf() +
+  theme_void()
+```
+
+The variations in the averaged BMA STVC coefficient estimates can be mapped in a similar way by linking to the `us_data` spatial layer, and here we see the nature of the temporal variation in the Unemployment and spatio-temporal variation in Public capital covariates as expected. 
+
+
+```{r bmamap2, message = F, warning = F, fig.height = 8, fig.width = 7, fig.cap = "The spatial variation of coefficient estimatess for BMA Unemployment and Public captial over time, generated  Bayesian Model Avaergaing approach."}
+# link the data
+stvc_bma_sf <-
+  us_data |> select(GEOID) |>
+  left_join(productivity |> 
+              select(GEOID, year) |> 
+              cbind(stvc_bma)) |>
+  relocate(geometry, .after = last_col())
+
+# create the plots
+tit =expression(paste(""*beta[`Unemployment`]*""))
+p1 = stvc_bma_sf |>
+  ggplot() + geom_sf(aes(fill = unemp), col = NA) +
+	scale_fill_binned_c4a_seq(palette="scico.lajolla", name = tit) + 
+  facet_wrap(~year) +
+	theme_bw() + xlab("") + ylab("") + 
+	theme(
+	  strip.background =element_rect(fill="white"), 
+	  strip.text = element_text(size = 8, margin = margin()),
+	  legend.position = c(.7, .1), 
+	  legend.direction = "horizontal",
+	  legend.key.width = unit(1.15, "cm"),
+		axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), 
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())  
+p2 = stvc_bma_sf |>
+  ggplot() + geom_sf(aes(fill = pubC), col = NA) +
+	scale_fill_binned_c4a_seq(palette="scico.lajolla", name = tit) + 
+  facet_wrap(~year) +
+	theme_bw() + xlab("") + ylab("") + 
+	theme(
+	  strip.background =element_rect(fill="white"), 
+	  strip.text = element_text(size = 8, margin = margin()),
+	  legend.position = c(.7, .1), 
+	  legend.direction = "horizontal",
+	  legend.key.width = unit(1.15, "cm"),
+		axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank(), 
+        axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())  
+plot_grid(p1, p2, nrow = 2)
+```
+
+## Summary
+
+The key and substantive methodological point in this vignette is the need to consider the nature of the spatial and temporal interactions (dependencies) between the target and predictor variables. 
+
+Model form (and thus the nature of the space-time process) should not be assumed and hence the provision of functions to create , evaluate and rank multiple models in the `stgam` package. Most approaches to SVC and STVC modelling implicitly assume specific spatial and space-time dependencies. 
+
+The approach presented din this vignettes represents a fundamental difference in philosophy to (spatial and) space-time modelling. The method is essentially about model comparison to *test* for space time dependency. 
+
+
+
+# References{-}

@@ -17,7 +17,7 @@
 #' library(purrr)
 #' library(doParallel)
 #' library(mgcv)
-#' data(productivity)
+#' data("productivity")
 #' data = productivity |> filter(year == "1970")
 #' svc_res_gam =
 #'   evaluate_models(data = data,
@@ -123,7 +123,15 @@ evaluate_models = function(data,
       vc_res_gam = rbind(vc_res_gam, res.i)
     }
   } else {
-    cl <- makeCluster(detectCores()-1)
+    # see https://stackoverflow.com/questions/50571325/r-cran-check-fail-when-using-parallel-functions
+    chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
+    if (nzchar(chk) && chk == "TRUE") {
+      # use 2 cores in CRAN/Travis/AppVeyor
+      cl <- makeCluster(2L)
+    } else {
+      # use all cores in devtools::test()
+      cl <- makeCluster(detectCores()-1)
+    }
     registerDoParallel(cl)
     vc_res_gam <-
       foreach(i = 1:nrow(terms_grid),

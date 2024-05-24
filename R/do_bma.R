@@ -26,7 +26,11 @@
 #' # determine their probabilities
 #' mod_comp_svc <- gam_model_probs(svc_res_gam)
 #' # combine the model coefficients
-#' svc_bma <- do_bma(mod_comp_svc, relative = FALSE, data = data)
+#' svc_bma <- do_bma(mod_comp_svc,
+#'       terms = c("Intercept", "unemp", "pubC"),
+#'       thresh = 0.1,
+#'       relative = FALSE,
+#'       data = data)
 #' head(svc_bma)
 #' # join back to spatial layer
 #' data(us_data)
@@ -42,14 +46,14 @@
 #' tit =expression(paste(""*beta[`Public Capital`]*" "))
 #' ggplot(data = svc_bma_sf, aes(fill=pubC)) +
 #'   geom_sf() +
-#'   scale_fill_continuous_c4a_div(palette="brewer.spectral",name=tit) +
+#'   scale_fill_continuous_c4a_div(palette="brewer.blues",name=tit) +
 #'   coord_sf() +
 #'   theme_void()
 
 do_bma = function(model_table,
-                  terms = c("Intercept", "unemp", "pubC"),
+                  terms,
                   thresh = 0.1,
-                  relative = T,
+                  relative = F,
                   data){
   # 6.1 re-create the top models and extract coefficients
   extract_vcs = function(formulae, terms, data) {
