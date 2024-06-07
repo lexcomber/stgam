@@ -1,7 +1,7 @@
 ---
 title: "Introduction to space-time GAMS with `stgam`"
-author: "Lex Comber"
-date: "May 2023"
+author: "Lex Comber, Paul Harris and Chrs Brunsdon"
+date: "June 2024"
 output: rmarkdown::html_vignette
 bibliography: vignette.bib
 
@@ -116,11 +116,11 @@ gam.check(svc.gam)
 summary(svc.gam)
 ```
 
-Here it can be seen that 
+Here it can be seen that:
 
-1. the model is well tuned: all of the all effective degrees of freedom (`edf` are well below `k` in the `gam.check()` printed output (the `k-index<1` issue is not important because of this) 
-1. all of the the fixed parametric terms are significant 
-1. of the smooth terms, only `pccap` is locally significant and spatially varying.
+1. The model is well tuned: all of the all effective degrees of freedom (`edf` are well below `k` in the `gam.check()` printed output (the `k-index<1` issue is not important because of this).
+1. All of the the fixed parametric terms are significant.
+1. Of the smooth terms, only `pccap` is locally significant and spatially varying.
 
 The spatially varying coefficient estimates can be extracted using `predict`. To do this a dummy data set is created with the `pubC` term set to 1, and the intersect and `unemp` terms set to zero. The result is that the predicted values for the coefficient estimate are just a function of $\beta_2$, the `pubC` coefficient estimate at each location.
 
@@ -327,7 +327,7 @@ The rationale for using GAMs with GP splines for spatially varying coefficient (
 
 Initial research has demonstrated the formulation and application of a GAM with GP splines calibrated via observation location as a multiscale SVC model: the Geographical Gaussian Process GAM (GGP-GAM) [@comber2024multiscale]. The GGP-GAM was compared with the most popular SVC model, Geographically Weighted Regression (GWR) [@brunsdon1996geographically] and shown to out-perform Multiscale GWR. 
 
-However, when handling space *and* time, simply plugging all the space time data into specific GAM configuration is to make potentially unreasonable assumptions about how space and time interact in spatially and temporally varying coefficient (STVC) models. To address this workshop has suggested that the full set of models is investigated to identify the best model or the best set of models. Where there is a clear winner, this can be applied. Where these is not, as in the example used then the model coefficients can be combined using Bayesian Model Averaging.
+However, when handling space *and* time, simply plugging all the space time data into specific GAM configuration is to make potentially unreasonable assumptions about how space and time interact in spatially and temporally varying coefficient (STVC) models. To address this workshop has suggested that the full set of models is investigated to identify the best model or the best set of models. Where there is a clear winner, this can be applied. Where these is not, as in the example used then the model coefficients can be combined using Bayesian Model Averaging (in the second vignette).
 
 
 ## References
