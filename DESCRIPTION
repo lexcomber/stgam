@@ -8,6 +8,10 @@ Authors@R:
            comment = c(ORCID = "0000-0003-0259-4079"))
     person("Chris", "Brunsdon", email = "christopher.brunsdon@mu.ie", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0003-4254-1780"))
+Author: Lex Comber [aut, cre],
+  Paul Harris [aut, cre],
+  Chris Brunsdon [aut, cre]
+Maintainer: Lex Comber <a.comber@leeds.ac.ukt>
 Description: This package provides a framework for specifying spatially varying coefficient (SVC) models, temporally varying coefficient (TVC) models and spatially and temporally varying coefficient (STVC) models. It uses the `mgcv` package to construct Generalized Additive Models with Gaussian Porcess (GP) smooths, that are parametirsed with location and / or time attributes. Importantly it provides a framework for investigating the nature and presence of any space-time dedpendencies in the data, allowing the user to evaluate different model forms (specifications), to pick the most probabaly model or to combine multiple varying coefficient models using Bayesian Model Averaging.
 License: MIT + file LICENSE
 Encoding: UTF-8
