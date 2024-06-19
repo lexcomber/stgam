@@ -4,20 +4,18 @@
 #' @param n the number of models to retain and generate probabilities for
 #'
 #' @return a ranked data table in `tibble` format of the top `n` models, their form, BIC and probability or relative probability
+#' @importFrom dplyr rename
+#' @importFrom dplyr arrange
+#' @importFrom dplyr tibble
+#' @importFrom dplyr relocate
+#' @importFrom dplyr slice_head
+#' @importFrom dplyr across
 #' @export
-#'
-#' @examples
-#' library(dplyr)
-#' library(purrr)
-#' library(glue)
-#' library(mgcv)
-#' data(productivity)
-#' data = productivity |> filter(year == "1970")
-#' svc_res_gam = evaluate_models(data, STVC = FALSE)
-#' mod_comp_svc <- gam_model_probs(svc_res_gam, n = 10)
-#' # print out the terms
-#' mod_comp_svc|> select(-f)
 gam_model_probs <- function(res_tab, n = 10) {
+  bic = NULL
+  Prob = NULL
+  Rank = NULL
+  `Pr(M|D)` = NULL
   nm <- names(res_tab)
   len = length(nm)
   mod_comp <-
@@ -54,3 +52,14 @@ gam_model_probs <- function(res_tab, n = 10) {
   }
   out_tab
 }
+#' @examples
+#' library(dplyr)
+#' library(purrr)
+#' library(glue)
+#' library(mgcv)
+#' data(productivity)
+#' data = productivity |> filter(year == "1970")
+#' svc_res_gam = evaluate_models(data, STVC = FALSE)
+#' mod_comp_svc <- gam_model_probs(svc_res_gam, n = 10)
+#' # print out the terms
+#' mod_comp_svc|> select(-f)

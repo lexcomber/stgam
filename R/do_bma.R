@@ -7,49 +7,11 @@
 #' @param data the inupt data with a nmaed Intercept term
 #'
 #' @return a matrix of the probability weighted averaged coefficient estimates
+#' @importFrom mgcv gam
+#' @importFrom stats as.formula
+#' @importFrom dplyr select
+#' @importFrom tidyselect all_of
 #' @export
-#'
-#' @examples
-#' library(cols4all)
-#' library(dplyr)
-#' library(sf)
-#' library(glue)
-#' library(purrr)
-#' library(mgcv)
-#' library(sf)
-#' library(ggplot2)
-#' # data
-#' data(productivity)
-#' data = productivity |> filter(year == "1970") |> mutate(Intercept = 1)
-#' # create and evaluate multiple models
-#' svc_res_gam = evaluate_models(data, STVC = FALSE)
-#' # determine their probabilities
-#' mod_comp_svc <- gam_model_probs(svc_res_gam)
-#' # combine the model coefficients
-#' svc_bma <- do_bma(mod_comp_svc,
-#'       terms = c("Intercept", "unemp", "pubC"),
-#'       thresh = 0.1,
-#'       relative = FALSE,
-#'       data = data)
-#' head(svc_bma)
-#' # join back to spatial layer
-#' data(us_data)
-#' svc_bma_sf <-
-#' us_data |>
-#' select(GEOID) |>
-#' left_join(productivity |>
-#'   filter(year == "1970") |>
-#'   select(GEOID, year) |>
-#'   cbind(svc_bma)) |>
-#'   relocate(geometry, .after = last_col())
-#' # and map
-#' tit =expression(paste(""*beta[`Public Capital`]*" "))
-#' ggplot(data = svc_bma_sf, aes(fill=pubC)) +
-#'   geom_sf() +
-#'   scale_fill_continuous_c4a_div(palette="brewer.blues",name=tit) +
-#'   coord_sf() +
-#'   theme_void()
-
 do_bma = function(model_table,
                   terms,
                   thresh = 0.1,
@@ -107,3 +69,46 @@ do_bma = function(model_table,
   svc <- weighted_vcs(svc_list, probs, terms)
   svc
 }
+
+#'
+#' @examples
+#' library(cols4all)
+#' library(dplyr)
+#' library(sf)
+#' library(glue)
+#' library(purrr)
+#' library(mgcv)
+#' library(sf)
+#' library(ggplot2)
+#' # data
+#' data(productivity)
+#' data = productivity |> filter(year == "1970") |> mutate(Intercept = 1)
+#' # create and evaluate multiple models
+#' svc_res_gam = evaluate_models(data, STVC = FALSE)
+#' # determine their probabilities
+#' mod_comp_svc <- gam_model_probs(svc_res_gam)
+#' # combine the model coefficients
+#' svc_bma <- do_bma(mod_comp_svc,
+#'       terms = c("Intercept", "unemp", "pubC"),
+#'       thresh = 0.1,
+#'       relative = FALSE,
+#'       data = data)
+#' head(svc_bma)
+#' # join back to spatial layer
+#' data(us_data)
+#' svc_bma_sf <-
+#' us_data |>
+#' select(GEOID) |>
+#' left_join(productivity |>
+#'   filter(year == "1970") |>
+#'   select(GEOID, year) |>
+#'   cbind(svc_bma)) |>
+#'   relocate(geometry, .after = last_col())
+#' # and map
+#' tit =expression(paste(""*beta[`Public Capital`]*" "))
+#' ggplot(data = svc_bma_sf, aes(fill=pubC)) +
+#'   geom_sf() +
+#'   scale_fill_continuous_c4a_div(palette="brewer.blues",name=tit) +
+#'   coord_sf() +
+#'   theme_void()
+

@@ -9,24 +9,16 @@
 #' @param time_var the name of the time variable if undertaking STVC model evaluations
 #'
 #' @return a data table in data.frame format of all possible model combinations with each covraite specified in all possible ways
+#' @importFrom glue glue
+#' @importFrom stats formula
+#' @importFrom stats BIC
+#' @importFrom parallel makeCluster
+#' @importFrom parallel detectCores
+#' @importFrom doParallel registerDoParallel
+#' @importFrom foreach %dopar%
+#' @importFrom foreach foreach
+#' @importFrom parallel stopCluster
 #' @export
-#'
-#' @examples
-#' library(dplyr)
-#' library(glue)
-#' library(purrr)
-#' library(doParallel)
-#' library(mgcv)
-#' data("productivity")
-#' data = productivity |> filter(year == "1970")
-#' svc_res_gam =
-#'   evaluate_models(data = data,
-#'     target_var = "privC",
-#'     covariates = c("unemp", "pubC"),
-#'     coords_x = "X",
-#'     coords_y = "Y",
-#'     STVC = FALSE)
-#' head(svc_res_gam)
 evaluate_models = function(data,
                            target_var = "privC",
                            covariates = c("unemp", "pubC"),
@@ -144,3 +136,20 @@ evaluate_models = function(data,
   }
   vc_res_gam
 }
+#'
+#' @examples
+#' library(dplyr)
+#' library(glue)
+#' library(purrr)
+#' library(doParallel)
+#' library(mgcv)
+#' data("productivity")
+#' data = productivity |> filter(year == "1970")
+#' svc_res_gam =
+#'   evaluate_models(data = data,
+#'     target_var = "privC",
+#'     covariates = c("unemp", "pubC"),
+#'     coords_x = "X",
+#'     coords_y = "Y",
+#'     STVC = FALSE)
+#' head(svc_res_gam)

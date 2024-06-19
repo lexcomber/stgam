@@ -1,6 +1,6 @@
 Package: stgam
 Title: Space Time GAMs: Spatially and Temporally Varying Coefficient Models Using GAMs
-Version: 0.0.0.9000
+Version: 0.0.1.0
 Authors@R: 
     person("Alexis", "Comber", email = "a.comber@leeds.ac.uk", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-3652-7846"))
@@ -28,15 +28,16 @@ Depends:
     R (>= 2.10),
 LazyData: true
 Imports: 
-    cols4all,
     cowplot,
     doParallel,
     dplyr,
+    foreach,
     ggplot2,
     glue,
+    grDevices,
+    magrittr,
     metR,
     mgcv,
-    purrr,
-    sf,
-    tidyr
+    parallel,
+    tidyselect
 VignetteBuilder: knitr

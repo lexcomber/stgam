@@ -7,21 +7,17 @@
 #' @param nrow the number of rows for the compound plot
 #'
 #' @return a compound plot of the 2D smooths (rendered using cowplot::plot_grid )
-#' @export
-#'
-#' @examples
-#' library(mgcv)
-#' library(ggplot2)
-#' library(dplyr)
-#' library(metR)
-#' library(cowplot)
-#' set.seed(2) ## simulate some data...
-#' dat <- gamSim(1,n=400,dist="normal",scale=2)
-#' # use x1 and x2 as the coordinates
-#' b <- gam(y~s(x0, x1, bs = 'gp', by = x2),data=dat)
-#' plot_2d_smooth(b, filled = TRUE)
+#' @importFrom grDevices pdf
+#' @importFrom grDevices dev.off
+#' @importFrom ggplot2 geom_contour
+#' @importFrom ggplot2 coord_sf
+#' @importFrom ggplot2 geom_sf
+#' @importFrom ggplot2 geom_contour_filled
 
+#' @export
 plot_2d_smooth = function(mod, filled = FALSE, outline =  NULL, ncol = NULL, nrow = NULL) {
+  Var1 = NULL
+  Var2 = NULL
   pdf(file = NULL)        # dummy PDF
   smooths <- plot(mod, page = 1)  # call the plot
   dev.off()               # close the dummy plot
@@ -86,3 +82,16 @@ plot_2d_smooth = function(mod, filled = FALSE, outline =  NULL, ncol = NULL, nro
                       list(nrow = nrow))
   do.call(plot_grid, plot_grid_args)
 }
+#' @examples
+#' library(mgcv)
+#' library(ggplot2)
+#' library(dplyr)
+#' library(metR)
+#' library(cowplot)
+#' set.seed(2) ## simulate some data...
+#' dat <- gamSim(1,n=400,dist="normal",scale=2)
+#' # use x1 and x2 as the coordinates
+#' b <- gam(y~s(x0, x1, bs = 'gp', by = x2),data=dat)
+#' plot_2d_smooth(b, filled = TRUE)
+
+

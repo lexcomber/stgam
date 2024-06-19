@@ -35,20 +35,3 @@ a data table in data.frame format of all possible model combinations with each c
 \description{
 Creates evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
 }
-\examples{
-library(dplyr)
-library(glue)
-library(purrr)
-library(doParallel)
-library(mgcv)
-data("productivity")
-data = productivity |> filter(year == "1970")
-svc_res_gam =
-  evaluate_models(data = data,
-    target_var = "privC",
-    covariates = c("unemp", "pubC"),
-    coords_x = "X",
-    coords_y = "Y",
-    STVC = FALSE)
-head(svc_res_gam)
-}
