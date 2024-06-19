@@ -2,11 +2,11 @@ Package: stgam
 Title: Space Time GAMs: Spatially and Temporally Varying Coefficient Models Using GAMs
 Version: 0.0.0.9000
 Authors@R: 
-    person("Alexis", "Comber", , "a.comber@leeds.ac.uk", role = c("aut", "cre"),
+    person("Alexis", "Comber", email = "a.comber@leeds.ac.uk", role = c("aut", "cre"),
            comment = c(ORCID = "0000-0002-3652-7846"))
-    person("Paul", "Harris", , "paul.harris@rothamsted.ac.uk", role = c("aut", "cre"),
+    person("Paul", "Harris", email = "paul.harris@rothamsted.ac.uk", role = c("ctb"),
            comment = c(ORCID = "0000-0003-0259-4079"))
-    person("Chris", "Brunsdon", , "christopher.brunsdon@mu.ie", role = c("aut", "cre"),
+    person("Chris", "Brunsdon", email = "christopher.brunsdon@mu.ie", role = c("ctb"),
            comment = c(ORCID = "0000-0003-4254-1780"))
 Description: This package provides a framework for specifying spatially varying coefficient (SVC) models, temporally varying coefficient (TVC) models and spatially and temporally varying coefficient (STVC) models. It uses the `mgcv` package to construct Generalized Additive Models with Gaussian Porcess (GP) smooths, that are parametirsed with location and / or time attributes. Importantly it provides a framework for investigating the nature and presence of any space-time dedpendencies in the data, allowing the user to evaluate different model forms (specifications), to pick the most probabaly model or to combine multiple varying coefficient models using Bayesian Model Averaging.
 License: MIT + file LICENSE
