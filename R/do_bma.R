@@ -4,7 +4,7 @@
 #' @param terms a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in  `data` )
 #' @param thresh a probability threshold value above which to combine competing models
 #' @param relative a logical to indicate whether the probabilities in `data` are relative (`Pr(M)`) or absolute (`Pr(M|D)`)
-#' @param data the inupt data with a nmaed Intercept term
+#' @param data the input data with a named Intercept term
 #'
 #' @return a matrix of the probability weighted averaged coefficient estimates
 #' @importFrom mgcv gam
