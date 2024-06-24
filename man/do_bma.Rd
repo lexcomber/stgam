@@ -18,7 +18,7 @@ do_bma(model_table, terms, thresh = 0.1, relative = FALSE, data)
 \item{data}{the input data with a named Intercept term}
 }
 \value{
-a matrix of the probability weighted averaged coefficient estimates
+A \code{matrix} of the probability weighted averaged coefficient estimates from multiple models.
 }
 \description{
 Undertake undertake coefficient averaging using Bayesian Model Avergaing (BMA), weighting different models by their probabailities
@@ -41,10 +41,10 @@ svc_res_gam = evaluate_models(data, STVC = FALSE)
 mod_comp_svc <- gam_model_probs(svc_res_gam)
 # combine the model coefficients
 svc_bma <- do_bma(mod_comp_svc,
-      terms = c("Intercept", "unemp", "pubC"),
-      thresh = 0.1,
-      relative = FALSE,
-      data = data)
+                  terms = c("Intercept", "unemp", "pubC"),
+                  thresh = 0.1,
+                  relative = FALSE,
+                  data = data)
 head(svc_bma)
 # join back to spatial layer
 data(us_data)

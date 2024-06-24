@@ -2,7 +2,7 @@
 % Please edit documentation in R/evaluate_models.R
 \name{evaluate_models}
 \alias{evaluate_models}
-\title{Creates evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)}
+\title{Creates and evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)}
 \usage{
 evaluate_models(
   data,
@@ -30,13 +30,13 @@ evaluate_models(
 
 \item{time_var}{the name of the time variable if undertaking STVC model evaluations}
 
-\item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks) - this can be determined for your computer by running \code{parallel::detectCores()-1}}
+\item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running \code{parallel::detectCores()-1}. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.}
 }
 \value{
-a data table in data.frame format of all possible model combinations with each covariate specified in all possible ways
+A data table in \code{data.frame} format of all possible model combinations with each covariate specified in all possible ways, with the BIC of the model and the model formula.
 }
 \description{
-Creates evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
+Creates and evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
 }
 \examples{
 library(dplyr)
@@ -48,10 +48,10 @@ data("productivity")
 data = productivity |> filter(year == "1970")
 svc_res_gam =
   evaluate_models(data = data,
-    target_var = "privC",
-    covariates = c("unemp", "pubC"),
-    coords_x = "X",
-    coords_y = "Y",
-    STVC = FALSE)
+                  target_var = "privC",
+                  covariates = c("unemp", "pubC"),
+                  coords_x = "X",
+                  coords_y = "Y",
+                  STVC = FALSE)
 head(svc_res_gam)
 }

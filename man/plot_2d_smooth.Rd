@@ -18,7 +18,7 @@ plot_2d_smooth(mod, filled = FALSE, outline = NULL, ncol = NULL, nrow = NULL)
 \item{nrow}{the number of rows for the compound plot}
 }
 \value{
-a compound plot of the 2D smooths (rendered using cowplot::plot_grid )
+A compound plot of the 2-dimensional smooths (rendered using \code{cowplot::plot_grid}).
 }
 \description{
 Plots a 2-Dimensional GAM smooth
