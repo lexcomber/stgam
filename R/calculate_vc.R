@@ -1,10 +1,10 @@
-#' Extracts varying coefficient estimates (for SVC, TVC and STVC)
+#' Extracts varying coefficient estimates (for SVC, TVC and STVC models).
 #'
 #' @param model a GAM model with smooths created using the `mgcv` package
 #' @param terms a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in `data` )
 #' @param data the data used to create the GAM model, `data.frame` or `tibble` format
 #'
-#' @return a `data.frame` of the input data and the coefficient and standard error estimates for each covariate
+#' @return A `data.frame` of the input data and the coefficient and standard error estimates for each covariate.
 #' @importFrom magrittr %>%
 #' @importFrom dplyr mutate
 #' @importFrom stats predict
@@ -16,10 +16,10 @@
 #' data(productivity)
 #' data = productivity |> dplyr::filter(year == "1970") |> mutate(Intercept = 1)
 #' gam.svc.mod = gam(privC ~ 0 + Intercept +
-#'   s(X, Y, bs = 'gp', by = Intercept) +
-#'   unemp + s(X, Y, bs = "gp", by = unemp) +
-#'   pubC + s(X, Y, bs = "gp", by = pubC),
-#'   data = data)
+#'                   s(X, Y, bs = 'gp', by = Intercept) +
+#'                   unemp + s(X, Y, bs = "gp", by = unemp) +
+#'                   pubC + s(X, Y, bs = "gp", by = pubC),
+#'                   data = data)
 #' terms = c("Intercept", "unemp", "pubC")
 #' svcs = calculate_vcs(gam.svc.mod, terms, data)
 #' @export

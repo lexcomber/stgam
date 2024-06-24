@@ -6,7 +6,7 @@
 #' @param relative a logical to indicate whether the probabilities in `data` are relative (`Pr(M)`) or absolute (`Pr(M|D)`)
 #' @param data the input data with a named Intercept term
 #'
-#' @return a matrix of the probability weighted averaged coefficient estimates
+#' @return A `matrix` of the probability weighted averaged coefficient estimates from multiple models.
 #' @importFrom mgcv gam
 #' @importFrom stats as.formula
 #' @importFrom dplyr select
@@ -30,10 +30,10 @@
 #' mod_comp_svc <- gam_model_probs(svc_res_gam)
 #' # combine the model coefficients
 #' svc_bma <- do_bma(mod_comp_svc,
-#'       terms = c("Intercept", "unemp", "pubC"),
-#'       thresh = 0.1,
-#'       relative = FALSE,
-#'       data = data)
+#'                   terms = c("Intercept", "unemp", "pubC"),
+#'                   thresh = 0.1,
+#'                   relative = FALSE,
+#'                   data = data)
 #' head(svc_bma)
 #' # join back to spatial layer
 #' data(us_data)

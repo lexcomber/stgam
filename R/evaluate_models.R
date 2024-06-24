@@ -9,7 +9,7 @@
 #' @param time_var the name of the time variable if undertaking STVC model evaluations
 #' @param ncores the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks) - this can be determined for your computer by running `parallel::detectCores()-1`
 #'
-#' @return a data table in data.frame format of all possible model combinations with each covariate specified in all possible ways
+#' @return A data table in `data.frame` format of all possible model combinations with each covariate specified in all possible ways, with the BIC of the model and the model formula.
 #' @importFrom glue glue
 #' @importFrom stats formula
 #' @importFrom stats BIC
@@ -30,11 +30,11 @@
 #' data = productivity |> filter(year == "1970")
 #' svc_res_gam =
 #'   evaluate_models(data = data,
-#'     target_var = "privC",
-#'     covariates = c("unemp", "pubC"),
-#'     coords_x = "X",
-#'     coords_y = "Y",
-#'     STVC = FALSE)
+#'                   target_var = "privC",
+#'                   covariates = c("unemp", "pubC"),
+#'                   coords_x = "X",
+#'                   coords_y = "Y",
+#'                   STVC = FALSE)
 #' head(svc_res_gam)
 #' @export
 evaluate_models = function(data,

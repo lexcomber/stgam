@@ -6,7 +6,7 @@
 #' @param ncol the number of columns for the compound plot
 #' @param nrow the number of rows for the compound plot
 #'
-#' @return a compound plot of the 2D smooths (rendered using cowplot::plot_grid )
+#' @return A compound plot of the 2-dimensional smooths (rendered using `cowplot::plot_grid`).
 #' @importFrom grDevices pdf
 #' @importFrom grDevices dev.off
 #' @importFrom ggplot2 geom_contour
