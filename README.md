@@ -40,10 +40,10 @@ data = productivity |> filter(year == "1970")
 # create multiple models with different forms
 svc_gam =
   evaluate_models(data = data,target_var = "privC", 
-          covariates = c("unemp", "pubC"),
-          coords_x = "X",
-          coords_y = "Y",
-          STVC = FALSE)
+                  covariates = c("unemp", "pubC"),
+                  coords_x = "X",
+                  coords_y = "Y",
+                  STVC = FALSE)
 # examine
 head(svc_gam)
 # calculate the probabilities for each model 
