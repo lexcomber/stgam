@@ -11,7 +11,8 @@ evaluate_models(
   coords_x = "X",
   coords_y = "Y",
   STVC = FALSE,
-  time_var = NULL
+  time_var = NULL,
+  ncores = 2
 )
 }
 \arguments{
@@ -28,10 +29,29 @@ evaluate_models(
 \item{STVC}{a logical operator to indicate whether the models Space-Time (\code{TRUE}) or just Space (\code{FALSE})}
 
 \item{time_var}{the name of the time variable if undertaking STVC model evaluations}
+
+\item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks) - this can be determined for your computer by running \code{parallel::detectCores()-1}}
 }
 \value{
 a data table in data.frame format of all possible model combinations with each covraite specified in all possible ways
 }
 \description{
 Creates evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
+}
+\examples{
+library(dplyr)
+library(glue)
+library(purrr)
+library(doParallel)
+library(mgcv)
+data("productivity")
+data = productivity |> filter(year == "1970")
+svc_res_gam =
+  evaluate_models(data = data,
+    target_var = "privC",
+    covariates = c("unemp", "pubC"),
+    coords_x = "X",
+    coords_y = "Y",
+    STVC = FALSE)
+head(svc_res_gam)
 }

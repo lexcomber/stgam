@@ -10,6 +10,18 @@
 #' @importFrom dplyr relocate
 #' @importFrom dplyr slice_head
 #' @importFrom dplyr across
+#'
+#' @examples
+#' library(dplyr)
+#' library(purrr)
+#' library(glue)
+#' library(mgcv)
+#' data(productivity)
+#' data = productivity |> filter(year == "1970")
+#' svc_res_gam = evaluate_models(data, STVC = FALSE)
+#' mod_comp_svc <- gam_model_probs(svc_res_gam, n = 10)
+#' # print out the terms
+#' mod_comp_svc|> select(-f)
 #' @export
 gam_model_probs <- function(res_tab, n = 10) {
   bic = NULL
@@ -52,14 +64,4 @@ gam_model_probs <- function(res_tab, n = 10) {
   }
   out_tab
 }
-#' @examples
-#' library(dplyr)
-#' library(purrr)
-#' library(glue)
-#' library(mgcv)
-#' data(productivity)
-#' data = productivity |> filter(year == "1970")
-#' svc_res_gam = evaluate_models(data, STVC = FALSE)
-#' mod_comp_svc <- gam_model_probs(svc_res_gam, n = 10)
-#' # print out the terms
-#' mod_comp_svc|> select(-f)
+

@@ -8,6 +8,20 @@
 #' @importFrom magrittr %>%
 #' @importFrom dplyr mutate
 #' @importFrom stats predict
+#'
+#' @examples
+#' library(dplyr)
+#' library(mgcv)
+#' # SVC
+#' data(productivity)
+#' data = productivity |> dplyr::filter(year == "1970") |> mutate(Intercept = 1)
+#' gam.svc.mod = gam(privC ~ 0 + Intercept +
+#'   s(X, Y, bs = 'gp', by = Intercept) +
+#'   unemp + s(X, Y, bs = "gp", by = unemp) +
+#'   pubC + s(X, Y, bs = "gp", by = pubC),
+#'   data = data)
+#' terms = c("Intercept", "unemp", "pubC")
+#' svcs = calculate_vcs(gam.svc.mod, terms, data)
 #' @export
 calculate_vcs = function(model, terms, data) {
   . = NULL
@@ -31,19 +45,6 @@ calculate_vcs = function(model, terms, data) {
   output_data$yhat = predict(model, newdata = data)
   output_data
 }
-#' @examples
-#' library(dplyr)
-#' library(mgcv)
-#' # SVC
-#' data(productivity)
-#' data = productivity |> dplyr::filter(year == "1970") |> mutate(Intercept = 1)
-#' gam.svc.mod = gam(privC ~ 0 + Intercept +
-#'   s(X, Y, bs = 'gp', by = Intercept) +
-#'   unemp + s(X, Y, bs = "gp", by = unemp) +
-#'   pubC + s(X, Y, bs = "gp", by = pubC),
-#'   data = data)
-#' terms = c("Intercept", "unemp", "pubC")
-#' svcs = calculate_vcs(gam.svc.mod, terms, data)
 
 
 

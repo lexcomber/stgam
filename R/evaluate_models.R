@@ -7,6 +7,7 @@
 #' @param coords_y the name of the Y, Northing or Latitude variable in `data`
 #' @param STVC a logical operator to indicate whether the models Space-Time (`TRUE`) or just Space (`FALSE`)
 #' @param time_var the name of the time variable if undertaking STVC model evaluations
+#' @param ncores the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks) - this can be determined for your computer by running `parallel::detectCores()-1`
 #'
 #' @return a data table in data.frame format of all possible model combinations with each covraite specified in all possible ways
 #' @importFrom glue glue
@@ -18,6 +19,23 @@
 #' @importFrom foreach %dopar%
 #' @importFrom foreach foreach
 #' @importFrom parallel stopCluster
+#'
+#' @examples
+#' library(dplyr)
+#' library(glue)
+#' library(purrr)
+#' library(doParallel)
+#' library(mgcv)
+#' data("productivity")
+#' data = productivity |> filter(year == "1970")
+#' svc_res_gam =
+#'   evaluate_models(data = data,
+#'     target_var = "privC",
+#'     covariates = c("unemp", "pubC"),
+#'     coords_x = "X",
+#'     coords_y = "Y",
+#'     STVC = FALSE)
+#' head(svc_res_gam)
 #' @export
 evaluate_models = function(data,
                            target_var = "privC",
@@ -25,7 +43,8 @@ evaluate_models = function(data,
                            coords_x = "X",
                            coords_y = "Y",
                            STVC = FALSE,
-                           time_var = NULL) {
+                           time_var = NULL,
+                           ncores = 2) {
   # Helper functions
   # 1 intercept formula
   get_form_intercept = function(index, bs = "gp") {
@@ -116,14 +135,15 @@ evaluate_models = function(data,
     }
   } else {
     # see https://stackoverflow.com/questions/50571325/r-cran-check-fail-when-using-parallel-functions
-    chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
-    if (nzchar(chk) && chk == "TRUE") {
+    #chk <- Sys.getenv("_R_CHECK_LIMIT_CORES_", "")
+    #if (nzchar(chk) && chk == "TRUE") {
       # use 2 cores in CRAN/Travis/AppVeyor
-      cl <- makeCluster(2L)
-    } else {
-      # use all cores in devtools::test()
-      cl <- makeCluster(detectCores()-1)
-    }
+    #  cl <- makeCluster(2L)
+    #} else {
+    #  # use all cores in devtools::test()
+    #  cl <- makeCluster(detectCores()-1)
+    #}
+    cl = makeCluster(ncores)
     registerDoParallel(cl)
     vc_res_gam <-
       foreach(i = 1:nrow(terms_grid),
@@ -136,20 +156,3 @@ evaluate_models = function(data,
   }
   vc_res_gam
 }
-#'
-#' @examples
-#' library(dplyr)
-#' library(glue)
-#' library(purrr)
-#' library(doParallel)
-#' library(mgcv)
-#' data("productivity")
-#' data = productivity |> filter(year == "1970")
-#' svc_res_gam =
-#'   evaluate_models(data = data,
-#'     target_var = "privC",
-#'     covariates = c("unemp", "pubC"),
-#'     coords_x = "X",
-#'     coords_y = "Y",
-#'     STVC = FALSE)
-#' head(svc_res_gam)

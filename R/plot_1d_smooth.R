@@ -17,7 +17,26 @@
 #' @importFrom ggplot2 ylab
 #' @importFrom ggplot2 ylim
 #' @importFrom cowplot plot_grid
-
+#'
+#' @examples
+#' library(mgcv)
+#' library(ggplot2)
+#' library(dplyr)
+#' library(cowplot)
+#' # 1. from the `mgcv` `gam` function help
+#' set.seed(2) ## simulate some data...
+#' dat <- gamSim(1,n=400,dist="normal",scale=2)
+#' b <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat)
+#' plot_1d_smooth(b, ncol = 2, fills = c("lightblue", "lightblue3"))
+#' # 2. using a TVC
+#' data(productivity)
+#' data = productivity |> mutate(Intercept = 1)
+#' gam.tvc.mod = gam(privC ~ 0 + Intercept +
+#'   s(year, bs = 'gp', by = Intercept) +
+#'   unemp + s(year, bs = "gp", by = unemp) +
+#'   pubC + s(year, bs = "gp", by = pubC),
+#'   data = data)
+#' plot_1d_smooth(gam.tvc.mod, fills = "lightblue")
 #' @export
 plot_1d_smooth = function(mod, ncol = NULL, nrow = NULL, fills = "lightblue") {
   pdf(file = NULL)        # dummy PDF
@@ -55,24 +74,3 @@ plot_1d_smooth = function(mod, ncol = NULL, nrow = NULL, fills = "lightblue") {
                       list(nrow = nrow))
   do.call(plot_grid, plot_grid_args)
 }
-#'
-#' @examples
-#' library(mgcv)
-#' library(ggplot2)
-#' library(dplyr)
-#' library(cowplot)
-#' # 1. from the `mgcv` `gam` function help
-#' set.seed(2) ## simulate some data...
-#' dat <- gamSim(1,n=400,dist="normal",scale=2)
-#' b <- gam(y~s(x0)+s(x1)+s(x2)+s(x3),data=dat)
-#' plot_1d_smooth(b, ncol = 2, fills = c("lightblue", "lightblue3"))
-#' # 2. using a TVC
-#' data(productivity)
-#' data = productivity |> mutate(Intercept = 1)
-#' gam.tvc.mod = gam(privC ~ 0 + Intercept +
-#'   s(year, bs = 'gp', by = Intercept) +
-#'   unemp + s(year, bs = "gp", by = unemp) +
-#'   pubC + s(year, bs = "gp", by = pubC),
-#'   data = data)
-#' plot_1d_smooth(gam.tvc.mod, fills = "lightblue")
-#'
