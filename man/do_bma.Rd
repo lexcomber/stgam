@@ -15,7 +15,7 @@ do_bma(model_table, terms, thresh = 0.1, relative = FALSE, data)
 
 \item{relative}{a logical to indicate whether the probabilities in \code{data} are relative (\code{Pr(M)}) or absolute (\code{Pr(M|D)})}
 
-\item{data}{the inupt data with a nmaed Intercept term}
+\item{data}{the input data with a named Intercept term}
 }
 \value{
 a matrix of the probability weighted averaged coefficient estimates

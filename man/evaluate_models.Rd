@@ -33,7 +33,7 @@ evaluate_models(
 \item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks) - this can be determined for your computer by running \code{parallel::detectCores()-1}}
 }
 \value{
-a data table in data.frame format of all possible model combinations with each covraite specified in all possible ways
+a data table in data.frame format of all possible model combinations with each covariate specified in all possible ways
 }
 \description{
 Creates evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
