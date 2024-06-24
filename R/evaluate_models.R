@@ -1,4 +1,4 @@
-#' Creates evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
+#' Creates and evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
 #'
 #' @param data a `data.frame` or `tibble` containing the target variables, covariates and coordinate variables
 #' @param target_var the name of the target variable in `data`
@@ -7,7 +7,7 @@
 #' @param coords_y the name of the Y, Northing or Latitude variable in `data`
 #' @param STVC a logical operator to indicate whether the models Space-Time (`TRUE`) or just Space (`FALSE`)
 #' @param time_var the name of the time variable if undertaking STVC model evaluations
-#' @param ncores the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks) - this can be determined for your computer by running `parallel::detectCores()-1`
+#' @param ncores the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running `parallel::detectCores()-1`. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.
 #'
 #' @return A data table in `data.frame` format of all possible model combinations with each covariate specified in all possible ways, with the BIC of the model and the model formula.
 #' @importFrom glue glue
