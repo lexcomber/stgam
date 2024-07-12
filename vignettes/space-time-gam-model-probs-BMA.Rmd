@@ -229,10 +229,10 @@ The process above had a number of stages:
 - each model was constructed and the BIC calculated using a `for` loop or a parallelised approach
 - the probability for each model was determined and the top 10 models returned
 
-The `stgam` package has generic function that wrap these operations and the code below applies them to the STVC problem. The `evaluate_models` function creates and evaluates the different models (it may take a minute to run):
+The `stgam` package has generic function that wrap these operations and the code below applies them to the STVC problem. The `evaluate_models` function creates and evaluates the different models (it may take a minute or so to run):
 
 ```{r evalmods}
-stvc_res_gam = evaluate_models(data = productivity, 
+stvc_res_gam = evaluate_models(input_data = productivity, 
                                target_var = "privC",
                                covariates = c("unemp", "pubC"),
                                coords_x = "X",
@@ -263,7 +263,7 @@ We should expect to see these trends when the models are averaged. Note, also th
 
 The functions can be applied to a SVC problem:
 ```{r evalmods2}
-svc_res_gam = evaluate_models(data = productivity |> filter(year == "1970"), 
+svc_res_gam = evaluate_models(input_data = productivity |> filter(year == "1970"), 
                               target_var = "privC",
                               covariates = c("unemp", "pubC"),
                               coords_x = "X",
@@ -294,13 +294,13 @@ svc_bma <- do_bma(model_table = svc_mods,
                   terms = c("Intercept", "unemp", "pubC"),
                   thresh = 0.1,
                   relative = FALSE, 
-                  data = productivity |> filter(year == "1970"))
+                  input_data = productivity |> filter(year == "1970"))
 # STVC with relative probabilities
 stvc_bma <- do_bma(model_table = stvc_mods, 
                   terms = c("Intercept", "unemp", "pubC"),
                   thresh = 0.1,
                   relative = TRUE, 
-                  data = productivity)
+                  input_data = productivity)
 ```
 
 The results can be joined back to the spatial layer, in this case `us_data` to be mapped: 

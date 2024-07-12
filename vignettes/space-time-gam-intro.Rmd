@@ -45,9 +45,10 @@ Be warned! the Vignette only uses one function from the `stgam` package!
 
 ## Data and Packagees
 
-You should install the `stgam` package:
+You should install the `stgam` package either from CRAN or from GitHub:
 
 ```{r eval = F}
+install.packages("stgam", dependencies = TRUE)
 remotes::install_github("lexcomber/stgam")
 ```
 
@@ -151,7 +152,7 @@ The `stgam` package has a function to extract the varying coefficients, `calcula
 terms = c("Intercept", "unemp", "pubC")
 res <-  calculate_vcs(model = svc.gam, 
                       terms = terms, 
-                      data = productivity |> filter(year == "1970"))
+                      input_data = productivity |> filter(year == "1970"))
 summary(res[, paste0("b_",terms)])
 ```
 
@@ -213,7 +214,7 @@ The temporally varying coefficients can be extracted in the same way as the DVC 
 terms = c("Intercept", "unemp", "pubC")
 res <-  calculate_vcs(model = tvc.gam, 
                       terms = terms, 
-                      data = productivity)
+                      input_data = productivity)
 summary(res[, paste0("b_",terms)])
 ```
 The variation in coefficient estimates can be inspected over time, remembering that each State has the same coefficient estimate value for each year, so just one state is selected in the code below (you could chose another and the result would be the same). Notice the linear declines due to the linearity of the time covariate in the figure below.   
@@ -253,7 +254,7 @@ The coefficients spatial and temporally vary coefficients can be extracted in th
 terms = c("Intercept", "unemp", "pubC")
 res <-  calculate_vcs(model = stvc.gam, 
                       terms = terms, 
-                      data = productivity)
+                      input_data = productivity)
 summary(res[, paste0("b_",terms)])
 ```
 

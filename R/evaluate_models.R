@@ -1,6 +1,6 @@
 #' Creates and evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
 #'
-#' @param data a `data.frame` or `tibble` containing the target variables, covariates and coordinate variables
+#' @param input_data a `data.frame`, `tibble` `sf` containing the target variables, covariates and coordinate variables
 #' @param target_var the name of the target variable in `data`
 #' @param covariates the name of the covariates (predictor variables) in `data`
 #' @param coords_x the name of the X, Easting or Longitude variable in `data`
@@ -27,9 +27,9 @@
 #' library(doParallel)
 #' library(mgcv)
 #' data("productivity")
-#' data = productivity |> filter(year == "1970")
+#' input_data = productivity |> filter(year == "1970")
 #' svc_res_gam =
-#'   evaluate_models(data = data,
+#'   evaluate_models(input_data = input_data,
 #'                   target_var = "privC",
 #'                   covariates = c("unemp", "pubC"),
 #'                   coords_x = "X",
@@ -37,7 +37,7 @@
 #'                   STVC = FALSE)
 #' head(svc_res_gam)
 #' @export
-evaluate_models = function(data,
+evaluate_models = function(input_data,
                            target_var = "privC",
                            covariates = c("unemp", "pubC"),
                            coords_x = "X",
@@ -109,13 +109,13 @@ evaluate_models = function(data,
   # get_formula(indices)
 
   # 5 create and evaluate a GAM
-  evaluate_gam = function(i, terms_grid, data, ...){
+  evaluate_gam = function(i, terms_grid, input_data, ...){
     # make the formula
     indices = unlist(terms_grid[i,])
     f <- get_formula(indices)
     # do the GAM
-    data <-data |> mutate(Intercept = 1)
-    m = gam(f,data=data)
+    input_data <- input_data |> mutate(Intercept = 1)
+    m = gam(f, data=input_data)
     bic = BIC(m)
     # create the indices and formula for output
     index = data.frame(terms_grid[i,])
@@ -130,7 +130,7 @@ evaluate_models = function(data,
   if (nrow(terms_grid) < 30) {
     vc_res_gam <- NULL
     for(i in 1:nrow(terms_grid)) {
-      res.i = evaluate_gam(i, terms_grid, data)
+      res.i = evaluate_gam(i, terms_grid, input_data)
       vc_res_gam = rbind(vc_res_gam, res.i)
     }
   } else {
@@ -149,7 +149,7 @@ evaluate_models = function(data,
       foreach(i = 1:nrow(terms_grid),
               .combine = 'rbind',
               .packages = c("glue", "mgcv", "purrr", "dplyr")) %dopar% {
-                evaluate_gam(i, terms_grid,  data,
+                evaluate_gam(i, terms_grid,  input_data,
                              target_var, covariates, coords_x, coords_y, time_var)
               }
     stopCluster(cl)

@@ -12,7 +12,9 @@ A tibble with 816 rows and 14 columns.
 \item{region}{The region}
 \item{pubC}{Public capital which is composed of highways and streets (hwy) water and sewer facilities (water) and other public buildings and structures (util)}
 \item{hwy}{Highway and streets assets}
+\item{water}{Water utility assets}
 \item{util}{Other public buildings and structures}
+\item{privC}{Private captial stock}
 \item{gsp}{Gross state product}
 \item{emp}{Labour input measured by the employment in non-agricultural payrolls}
 \item{unemp}{State unemployment rate capture elements of the business cycle}

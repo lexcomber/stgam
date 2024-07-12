@@ -5,7 +5,7 @@
 \title{Creates and evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)}
 \usage{
 evaluate_models(
-  data,
+  input_data,
   target_var = "privC",
   covariates = c("unemp", "pubC"),
   coords_x = "X",
@@ -16,7 +16,7 @@ evaluate_models(
 )
 }
 \arguments{
-\item{data}{a \code{data.frame} or \code{tibble} containing the target variables, covariates and coordinate variables}
+\item{input_data}{a \code{data.frame}, \code{tibble} \code{sf} containing the target variables, covariates and coordinate variables}
 
 \item{target_var}{the name of the target variable in \code{data}}
 
@@ -45,9 +45,9 @@ library(purrr)
 library(doParallel)
 library(mgcv)
 data("productivity")
-data = productivity |> filter(year == "1970")
+input_data = productivity |> filter(year == "1970")
 svc_res_gam =
-  evaluate_models(data = data,
+  evaluate_models(input_data = input_data,
                   target_var = "privC",
                   covariates = c("unemp", "pubC"),
                   coords_x = "X",

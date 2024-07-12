@@ -23,9 +23,9 @@ library(purrr)
 library(glue)
 library(mgcv)
 data(productivity)
-data = productivity |> filter(year == "1970")
-svc_res_gam = evaluate_models(data, STVC = FALSE)
+input_data = productivity |> filter(year == "1970")
+svc_res_gam = evaluate_models(input_data, STVC = FALSE)
 mod_comp_svc <- gam_model_probs(svc_res_gam, n = 10)
-# print out the terms
+# print out the terms and probabilities
 mod_comp_svc|> select(-f)
 }
