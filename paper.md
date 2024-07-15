@@ -28,9 +28,11 @@ bibliography: paper.bib
 ---
 
 # Summary
-
+[@stgam]
 # Statement of need
 
 # Package overview
 
 # Worked example
+
+# Reference
