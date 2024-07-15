@@ -1,42 +1,36 @@
 ---
-title: 'Gala: A Python package for galactic dynamics'
+title: 'stgam: An R package for GAM-based varying coefficient models'
 tags:
-  - Python
-  - astronomy
-  - dynamics
-  - galactic dynamics
-  - milky way
+  - R
+  - spatio-temporal analysis
 authors:
-  - name: Adrian M. Price-Whelan
-    orcid: 0000-0000-0000-0000
+  - name: Lex Comber
+    orcid: 0000-0002-3652-7846
     equal-contrib: true
-    affiliation: "1, 2" # (Multiple affiliations must be quoted)
-  - name: Author Without ORCID
-    equal-contrib: true # (This is how you can denote equal contributions between multiple authors)
+    affiliation: 1
+  - name: Paul Harris
+    orcid: 0000-0003-0259-4079
+    equal-contrib: true
     affiliation: 2
-  - name: Author with no affiliation
-    corresponding: true # (This is how to denote the corresponding author)
-    affiliation: 3
-  - given-names: Ludwig
-    dropping-particle: van
-    surname: Beethoven
+  - name: Chris Brunsdon
+    orcid: 0000-0003-4254-1780
+    equal-contrib: true
     affiliation: 3
 affiliations:
- - name: Lyman Spitzer, Jr. Fellow, Princeton University, USA
+ - name: School of Geography, University of Leeds, UK
    index: 1
- - name: Institution Name, Country
+ - name: Rothamsted Research, North Wyke, UK
    index: 2
- - name: Independent Researcher, Country
+ - name: National Centre for Geocomputation, Maynooth University, Ireland
    index: 3
-date: 13 August 2017
+date: 16 July 2024
 bibliography: paper.bib
-
-# Optional fields if submitting to a AAS journal too, see this blog post:
-# https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
-aas-doi: 10.3847/xxxxx <- update this with the DOI from AAS once you know it.
-aas-journal: Astrophysical Journal <- The name of the AAS journal.
 ---
 
+# Summary
 
-# arse
-sss
+# Statement of need
+
+# Package overview
+
+# Worked example
