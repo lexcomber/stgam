@@ -1,8 +1,8 @@
 #' Plots a 1-Dimensional GAM smooth
 #'
 #' @param mod a GAM model with smooths created using the `mgcv` package
-#' @param ncol the number of columns for the compound plot
-#' @param nrow the number of rows for the compound plot
+#' @param ncol the number of columns in the compound plot
+#' @param nrow the number of rows in the compound plot
 #' @param fills the fill colours (single or vector)
 #'
 #' @return A compound plot of the GAM 1-dimensioanl smooths (rendered using `cowplot::plot_grid`).
