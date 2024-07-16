@@ -45,7 +45,6 @@ The **stgam** package contains functions to support varying coefficient modellin
 
 \begin{tabular}{l|l|l}
 \caption{Functions and data currently implemented in \textbf{stgam}.}
-\label{tab:package}
 \hline
 Name & Type & Description\\
 \hline
