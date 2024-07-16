@@ -1,5 +1,5 @@
 ---
-title: 'stgam: An R package for GAM-based varying coefficient models'
+title: '`stgam`: An R package for GAM-based varying coefficient models'
 tags:
   - R
   - spatio-temporal analysis
