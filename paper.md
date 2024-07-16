@@ -43,7 +43,7 @@ A final consideration is the need to determine model form. Standard approaches f
 
 The **stgam** package contains functions to support varying coefficient modelling using GAMs with GP smooths, that provide a wrapper for the GAM implementation in the `mgcv` package [@wood2015package], that create, evaluate, and aggregate multiple models. It also contains two datasets that are used to illustrate the functions. These are described in Table 1. 
 
-\begin{tabular}{l|l|l{2.49cm}}
+\begin{tabular}{l|l|p{2.49cm}}
 \hline
 Name & Type & Description\\
 \hline
@@ -69,6 +69,24 @@ us\_data & data & US States boundaries\\
 |plot_2d_smooth  |function |Plots a 2-Dimensional GAM smooth                                                                                                   |
 |productivity    |data     |US States Economic Productivity Data (1970-1985)                                                                                   |
 |us_data         |data     |US States boundaries                                                                                                               |
+
+\begin{table}[h]
+  \centering
+    \caption{Spatial models currently implemented in \textbf{geostan}.}
+      \label{tbl:models}
+  \begin{tabular}{lcccc}
+  \hline
+   &  Gaussian & Student's $t$ & Poisson & Binomial \\
+ \hline
+ CAR & x &  & x & x  \\
+ ESF & x & x & x & x \\
+GLM & x & x & x & x \\ 
+ ICAR & & & x & x \\
+ SAR & x & & x & x \\
+ \hline
+  \end{tabular}
+  \end{table}
+
 
 The package includes two vignettes. The first, *space-time-gam-intro*, provides a gentle introduction to undertaking varying coefficient regression analyses with GAMs via the **mgcv** package. The second vignette, *space-time-gam-model-probs-BMA*, describes a standard **stgam** workflow to create and evaluate multiple models, and then to either select the best one or to combine competing models using Bayesian Model Averaging.
 
