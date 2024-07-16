@@ -48,7 +48,7 @@ The `stgam` package contains functions to support varying coefficient modelling 
 \centering
 \caption{Spatial models currently implemented in \textbf{geostan}.}
 \label{tbl:package}
-\begin{tabular}{l|l|l}
+\begin{tabular}{c|c|C}
 \hline
 Name & Type & Description\\
 \hline
