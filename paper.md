@@ -44,7 +44,6 @@ A final consideration is the need to determine model form. Standard approaches f
 The **stgam** package contains functions to support varying coefficient modelling using GAMs with GP smooths, that provide a wrapper for the GAM implementation in the `mgcv` package [@wood2015package], that create, evaluate, and aggregate multiple models. It also contains two datasets that are used to illustrate the functions. These are described in Table 1. 
 
 \begin{tabular}{l|l|L}
-\caption{Functions and data currently implemented in \textbf{stgam}.}
 \hline
 Name & Type & Description\\
 \hline
