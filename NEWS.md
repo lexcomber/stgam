@@ -10,4 +10,8 @@
 # stgam 0.0.1.1
 
 * updated initial package to replace `data` function inputs with `input_data`.
-* tidied help file omissions and typos s
+* tidied help file omissions and typos
+
+# stgam 0.0.1.2
+
+* corrected and genericised the `do_bma` function

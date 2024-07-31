@@ -1,6 +1,6 @@
 Package: stgam
 Title: Spatially and Temporally Varying Coefficient Models Using Generalized Additive Models 
-Version: 0.0.1.1
+Version: 0.0.1.2
 Authors@R: c(
     person("Lex", "Comber", email = "a.comber@leeds.ac.uk", role = c("aut", "cre")),
     person("Paul", "Harris", email = "paul.harris@rothamsted.ac.uk", role = c("ctb")),
@@ -10,7 +10,7 @@ Author: Lex Comber [aut, cre],
   Paul Harris [ctb],
   Chris Brunsdon [ctb]
 Maintainer: Lex Comber <a.comber@leeds.ac.uk>
-Description: A framework for specifying spatially, temporally and spatial-and-temporally varying coefficient models using Generalized Additive Models with Gaussian Process smooths. The smooths are parameterised with location and / or time attributes. Importantly the framework supports the investigation of the presence and nature of any space-time dependencies in the data, allows the user to evaluate different model forms (specifications) and to pick the most probable model or to combine multiple varying coefficient models using Bayesian Model Averaging. For more details see: Brunsdon et al (2023) <doi:10.4230/LIPIcs.GIScience.2023.17>, Comber et al (2023) <doi:10.4230/LIPIcs.GIScience.2023.22> and Comber et al (2024) <doi:10.1080/13658816.2023.2270285>.
+Description: A framework for specifying spatially, temporally and spatially-and-temporally varying coefficient models using Generalized Additive Models with Gaussian Process smooths. The smooths are parameterised with location and / or time attributes. Importantly the framework supports the investigation of the presence and nature of any space-time dependencies in the data, allows the user to evaluate different model forms (specifications) and to pick the most probable model or to combine multiple varying coefficient models using Bayesian Model Averaging. For more details see: Brunsdon et al (2023) <doi:10.4230/LIPIcs.GIScience.2023.17>, Comber et al (2023) <doi:10.4230/LIPIcs.GIScience.2023.22> and Comber et al (2024) <doi:10.1080/13658816.2023.2270285>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -39,7 +39,7 @@ Imports:
     grDevices,
     magrittr,
     metR,
-    mgcv,
+    mgcv (>= 1.9-1),
     parallel,
     tidyselect
 VignetteBuilder: knitr
