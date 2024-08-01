@@ -18,7 +18,7 @@ do_bma(model_table, terms, thresh = 0.1, relative = FALSE, input_data)
 \item{input_data}{the input data with a named Intercept term, in \code{data.frame}, \code{tibble} or \code{sf} format}
 }
 \value{
-A \code{matrix} of the probability weighted averaged coefficient estimates from multiple models.
+A \code{tibble} of the input data plus the probability weighted averaged coefficient estimates from multiple models, all starting with \verb{b_<covariate name>}
 }
 \description{
 Undertake undertake coefficient averaging using Bayesian Model Avergaing (BMA), weighting different models by their probabilities
@@ -40,7 +40,7 @@ svc_res_gam = evaluate_models(input_data, STVC = FALSE)
 # determine their probabilities
 mod_comp_svc <- gam_model_probs(svc_res_gam)
 # combine the model coefficients
-svc_bma <- do_bma(mod_comp_svc,
+svc_bma <- do_bma(model_table = mod_comp_svc,
                   terms = c("Intercept", "unemp", "pubC"),
                   thresh = 0.1,
                   relative = FALSE,
@@ -49,16 +49,12 @@ head(svc_bma)
 # join back to spatial layer
 data(us_data)
 svc_bma_sf <-
-us_data |>
-select(GEOID) |>
-left_join(productivity |>
-  filter(year == "1970") |>
-  select(GEOID, year) |>
-  cbind(svc_bma)) |>
-  relocate(geometry, .after = last_col())
+  us_data |>
+  select(GEOID) |>
+  left_join(svc_bma)
 # and map
 tit =expression(paste(""*beta[`Public Capital`]*" "))
-ggplot(data = svc_bma_sf, aes(fill=pubC)) +
+ggplot(data = svc_bma_sf, aes(fill=b_pubC)) +
   geom_sf() +
   scale_fill_continuous_c4a_div(palette="brewer.yl_or_rd",name=tit) +
   coord_sf() +

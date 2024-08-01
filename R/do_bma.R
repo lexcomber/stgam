@@ -6,7 +6,7 @@
 #' @param relative logical to indicate whether the probabilities in `data` are relative (`Pr(M)`) or absolute (`Pr(M|D)`)
 #' @param input_data the input data with a named Intercept term, in `data.frame`, `tibble` or `sf` format
 #'
-#' @return A `matrix` of the probability weighted averaged coefficient estimates from multiple models.
+#' @return A `tibble` of the input data plus the probability weighted averaged coefficient estimates from multiple models, all starting with `b_<covariate name>`
 #' @importFrom mgcv gam
 #' @importFrom stats as.formula
 #' @importFrom dplyr select
@@ -29,7 +29,7 @@
 #' # determine their probabilities
 #' mod_comp_svc <- gam_model_probs(svc_res_gam)
 #' # combine the model coefficients
-#' svc_bma <- do_bma(mod_comp_svc,
+#' svc_bma <- do_bma(model_table = mod_comp_svc,
 #'                   terms = c("Intercept", "unemp", "pubC"),
 #'                   thresh = 0.1,
 #'                   relative = FALSE,
@@ -38,16 +38,12 @@
 #' # join back to spatial layer
 #' data(us_data)
 #' svc_bma_sf <-
-#' us_data |>
-#' select(GEOID) |>
-#' left_join(productivity |>
-#'   filter(year == "1970") |>
-#'   select(GEOID, year) |>
-#'   cbind(svc_bma)) |>
-#'   relocate(geometry, .after = last_col())
+#'   us_data |>
+#'   select(GEOID) |>
+#'   left_join(svc_bma)
 #' # and map
 #' tit =expression(paste(""*beta[`Public Capital`]*" "))
-#' ggplot(data = svc_bma_sf, aes(fill=pubC)) +
+#' ggplot(data = svc_bma_sf, aes(fill=b_pubC)) +
 #'   geom_sf() +
 #'   scale_fill_continuous_c4a_div(palette="brewer.yl_or_rd",name=tit) +
 #'   coord_sf() +
@@ -107,5 +103,15 @@ do_bma = function(model_table,
   svc_list = extract_vcs(formulae = f, terms, input_data)
   # combine
   svc <- weighted_vcs(svc_list, probs, terms)
-  svc
+  # link back to input data with yhat and working residuals
+  colnames(svc) = paste0("b_", colnames(svc))
+  x = (input_data[, terms[-1]])
+  y = (svc[,-1])
+  yhat = (as.vector(rowSums(x*y) + svc[,1]))
+  f = unlist(f[1])
+  target = all.vars(as.formula(f))[1]
+  resids = as.vector(unlist(input_data[, target])) - yhat
+  svc <-input_data |> cbind(svc)
+  svc <- svc |> tibble() |> mutate(yhat = yhat, residuals = resids)
+  return(svc)
 }
