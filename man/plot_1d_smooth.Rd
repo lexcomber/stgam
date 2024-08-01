@@ -7,16 +7,16 @@
 plot_1d_smooth(mod, ncol = NULL, nrow = NULL, fills = "lightblue")
 }
 \arguments{
-\item{mod}{a GAM model with smooths created using the mgcv package}
+\item{mod}{a GAM model with smooths created using the \code{mgcv} package}
 
-\item{ncol}{the number of columns for the compound plot}
+\item{ncol}{the number of columns in the compound plot}
 
-\item{nrow}{the number of rows for the compound plot}
+\item{nrow}{the number of rows in the compound plot}
 
 \item{fills}{the fill colours (single or vector)}
 }
 \value{
-A compound plot of the GAM 1-dimensioanl smooths (rendered using \code{cowplot::plot_grid}).
+A compound plot of the GAM 1-dimensional smooths (rendered using \code{cowplot::plot_grid()}).
 }
 \description{
 Plots a 1-Dimensional GAM smooth

@@ -6,7 +6,7 @@
 \alias{stgam-package}
 \title{stgam: Spatially and Temporally Varying Coefficient Models Using Generalized Additive Models}
 \description{
-A framework for specifying spatially, temporally and spatial-and-temporally varying coefficient models using Generalized Additive Models with Gaussian Process smooths. The smooths are parameterised with location and / or time attributes. Importantly the framework supports the investigation of the presence and nature of any space-time dependencies in the data, allows the user to evaluate different model forms (specifications) and to pick the most probable model or to combine multiple varying coefficient models using Bayesian Model Averaging. For more details see: Brunsdon et al (2023) \doi{10.4230/LIPIcs.GIScience.2023.17}, Comber et al (2023) \doi{10.4230/LIPIcs.GIScience.2023.22} and Comber et al (2024) \doi{10.1080/13658816.2023.2270285}.
+A framework for specifying spatially, temporally and spatially-and-temporally varying coefficient models using Generalized Additive Models with Gaussian Process smooths. The smooths are parameterised with location and / or time attributes. Importantly the framework supports the investigation of the presence and nature of any space-time dependencies in the data, allows the user to evaluate different model forms (specifications) and to pick the most probable model or to combine multiple varying coefficient models using Bayesian Model Averaging. For more details see: Brunsdon et al (2023) \doi{10.4230/LIPIcs.GIScience.2023.17}, Comber et al (2023) \doi{10.4230/LIPIcs.GIScience.2023.22} and Comber et al (2024) \doi{10.1080/13658816.2023.2270285}.
 }
 \seealso{
 Useful links:
