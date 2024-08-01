@@ -1,6 +1,6 @@
 Package: stgam
 Title: Spatially and Temporally Varying Coefficient Models Using Generalized Additive Models 
-Version: 0.0.1.2
+Version: 0.0.1.3
 Authors@R: c(
     person("Lex", "Comber", email = "a.comber@leeds.ac.uk", role = c("aut", "cre")),
     person("Paul", "Harris", email = "paul.harris@rothamsted.ac.uk", role = c("ctb")),

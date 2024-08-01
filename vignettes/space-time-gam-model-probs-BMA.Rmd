@@ -304,17 +304,15 @@ stvc_bma <- do_bma(model_table = stvc_mods,
 ```
 
 The results can be joined back to the spatial layer, in this case `us_data` to be mapped: 
-```{r bmamap1, fig.height = 4, fig.width = 7, fig.cap = "The spatial variation of the Public captial generated using a Bayesian Model Avaergaing approach."}
+```{r bmamap1, fig.height = 4, fig.width = 7, fig.cap = "The spatial variation of the Public captial covriate generated using a Bayesian Model Avaergaing approach."}
 # join
 svc_bma_sf <-
-  us_data |> select(GEOID) |>
-  left_join(productivity |> 
-              filter(year == "1970") |> select(GEOID, year) |> 
-              cbind(svc_bma)) |>
-  relocate(geometry, .after = last_col())
+  us_data |>
+  select(GEOID) |>
+  left_join(svc_bma)
 #  map
 tit =expression(paste(""*beta[`Public Capital`]*" "))
-ggplot(data = svc_bma_sf, aes(fill=pubC)) +
+ggplot(data = svc_bma_sf, aes(fill=b_pubC)) +
   geom_sf() +
   scale_fill_continuous_c4a_div(palette="brewer.blues",name=tit) +
   coord_sf() +
@@ -324,25 +322,22 @@ ggplot(data = svc_bma_sf, aes(fill=pubC)) +
 The variations in the averaged BMA STVC coefficient estimates can be mapped in a similar way by linking to the `us_data` spatial layer, and here we see the nature of the temporal variation in the Unemployment and spatio-temporal variation in Public capital covariates as expected. 
 
 
-```{r bmamap2, message = F, warning = F, fig.height = 8, fig.width = 7, fig.cap = "The spatial variation of coefficient estimatess for BMA Unemployment and Public captial over time, generated  Bayesian Model Avaergaing approach."}
+```{r bmamap2, message = F, warning = F, fig.height = 8, fig.width = 7, fig.cap = "The spatial variation of coefficient estimatess for BMA Unemployment and Public capital covriates over time, generated  Bayesian Model Avaergaing approach."}
 # link the data
 stvc_bma_sf <-
-  us_data |> select(GEOID) |>
-  left_join(productivity |> 
-              select(GEOID, year) |> 
-              cbind(stvc_bma)) |>
-  relocate(geometry, .after = last_col())
-
+  us_data |>
+  select(GEOID) |>
+  left_join(stvc_bma)
 # create the plots
 tit =expression(paste(""*beta[`Unemployment`]*""))
 p1 = stvc_bma_sf |>
-  ggplot() + geom_sf(aes(fill = unemp), col = NA) +
+  ggplot() + geom_sf(aes(fill = b_unemp), col = NA) +
 	scale_fill_binned_c4a_seq(palette="scico.lajolla", name = tit) + 
   facet_wrap(~year) +
 	theme_bw() + xlab("") + ylab("") + 
 	theme(
-	  strip.background =element_rect(fill="white"), 
-	  strip.text = element_text(size = 8, margin = margin()),
+    strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
 	  legend.position = c(.7, .1), 
 	  legend.direction = "horizontal",
 	  legend.key.width = unit(1.15, "cm"),
@@ -353,13 +348,13 @@ p1 = stvc_bma_sf |>
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank())  
 p2 = stvc_bma_sf |>
-  ggplot() + geom_sf(aes(fill = pubC), col = NA) +
+  ggplot() + geom_sf(aes(fill = b_pubC), col = NA) +
 	scale_fill_binned_c4a_seq(palette="scico.lajolla", name = tit) + 
   facet_wrap(~year) +
 	theme_bw() + xlab("") + ylab("") + 
 	theme(
-	  strip.background =element_rect(fill="white"), 
-	  strip.text = element_text(size = 8, margin = margin()),
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
 	  legend.position = c(.7, .1), 
 	  legend.direction = "horizontal",
 	  legend.key.width = unit(1.15, "cm"),
