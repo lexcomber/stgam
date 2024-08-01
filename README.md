@@ -9,7 +9,13 @@ The goal of the `stgam` package is to provide a framework for capturing process 
 
 ## Installation
 
-You can install the development version of `stgam` :
+You can install the CRAN version of `stgam` :
+
+``` r
+install.packages("stgam")
+```
+
+Or the development version:
 
 ``` r
 # just the package
