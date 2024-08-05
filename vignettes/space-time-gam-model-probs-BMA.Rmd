@@ -67,7 +67,7 @@ The STCV model specified above included space and time in a single smooth (splin
 
 In this vignette, these interactions are explored using a data driven (rather than theoretical) approach. A series of different models are created, each with different assumptions, and they are evaluated to determine which one of them is, or which set of them are, the most probable. 
 
-Multiple models can be created to explore all possible combinations of interaction and then to select the best model, through a probability based measure like BIC (see @comber2024gtgpjgis for a full treatment of this). There are a total 6 possible way that each covariate could be specified in the model:
+Multiple models can be created to explore all possible combinations of interaction and then to select the best model, through a probability based measure like BIC (see @brunsdon2023gisci for a description of this). There are a total 6 possible way that each covariate could be specified in the model:
 
 i. It is omitted.
 ii. It is included as a parametric response with no spline.
@@ -78,7 +78,7 @@ vi. It is included in 2 separate splines with location and time.
 
 The intercept can be treated similarly, but without it being absent (i.e. 5 options).
 
-To investigate STVC model form, a series of models can be specified, with each combination of the 6 permutations for each covariate, plus 5 states for the intercept. The best model(s) can be determined by quantifying the likelihood (probability) of each of model being the correct model. This can be approximated using the Bayesian Information Criterion (BIC) [@schwarz1978estimating] as described in full in @comber2024gtgpjgis, and if the probabilities for multiple models are high, then the models can be combined using a Bayesian Model Averaging (BMA) approach. BMA is described in the context of spatial modelling in @fragoso2018bayesian and summarised in @brunsdon2023gisci, but in brief, if a number of competing models exist with at least one quantity of interest that all have in common, and the likelihoods of each of them being the correct model is known (e.g. from BIC ), then a posterior distribution of the quantity of interest can be obtained by averaging them using the likelihoods as weights. In this way it allows competing models, treating space and time in different ways, to be combined. 
+To investigate STVC model form, a series of models can be specified, with each combination of the 6 permutations for each covariate, plus 5 states for the intercept. The best model(s) can be determined by quantifying the likelihood (probability) of each of model being the correct model. This can be approximated using the Bayesian Information Criterion (BIC) [@schwarz1978estimating] as described in @brunsdon2023gisci, and if the probabilities for multiple models are high, then the models can be combined using a Bayesian Model Averaging (BMA) approach. BMA is described in the context of spatial modelling in @fragoso2018bayesian and summarised in @brunsdon2023gisci, but in brief, if a number of competing models exist with at least one quantity of interest that all have in common, and the likelihoods of each of them being the correct model is known (e.g. from BIC ), then a posterior distribution of the quantity of interest can be obtained by averaging them using the likelihoods as weights. In this way it allows competing models, treating space and time in different ways, to be combined. 
 
 ## Creating multiple models: a walk-through
 
@@ -178,7 +178,7 @@ head(res_gam)
 
 ## Evaluating multiple models: a walk-through
 
-Having generated STVC multiple models and recorded the BIC values for them, it is possible to generate probabilities for each model and evaluate them. The logics and supporting equations for this evaluations of each mode are detailed in @comber2024gtgpjgis. The results need to be sorted, the best 10 models identified, their structures extracted and then their relative probabilities calculated: 
+Having generated STVC multiple models and recorded the BIC values for them, it is possible to generate probabilities for each model and evaluate them. The logics and supporting equations for this evaluations of each mode will be detailed in future publications by the package authors. The results need to be sorted, the best 10 models identified, their structures extracted and then their relative probabilities calculated: 
 ```{r}
 # sort the results
 mod_comp <- tibble(
@@ -286,7 +286,7 @@ summary(svc.gam)
 
 ## Combining multiple models using Bayesian Model Averaging
 
-For both the SVC and STVC cases, a number of models were highly probable. It is possible to combine these models using the probabilities as weights combine (average) the coefficient estimates, under a Bayesian Model Averaging approach (see @comber2024gtgpjgis for details). The code below applies the `do_bma` function to the summary tables generated above. The code can be used to construct the BMA coefficients from absolute or relative probabilities. 
+For both the SVC and STVC cases, a number of models were highly probable. It is possible to combine these models using the probabilities as weights combine (average) the coefficient estimates, under a Bayesian Model Averaging approach. The code below applies the `do_bma` function to the summary tables generated above. The code can be used to construct the BMA coefficients from absolute or relative probabilities. 
 
 ```{r dobma}
 # SVC with absolute probabilities
