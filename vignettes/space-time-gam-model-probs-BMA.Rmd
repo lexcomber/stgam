@@ -347,6 +347,7 @@ p1 = stvc_bma_sf |>
         axis.title.y=element_blank(),
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank())  
+tit =expression(paste(""*beta[`Public capital`]*""))
 p2 = stvc_bma_sf |>
   ggplot() + geom_sf(aes(fill = b_pubC), col = NA) +
 	scale_fill_binned_c4a_seq(palette="scico.lajolla", name = tit) + 
