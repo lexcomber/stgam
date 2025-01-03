@@ -54,7 +54,7 @@ do_bma = function(model_table,
                   thresh = 0.1,
                   relative = FALSE,
                   input_data){
-  # 6.1 re-create the top models and extract coefficients
+  # 1 re-create the top models and extract coefficients
   extract_vcs = function(formulae, terms, input_data) {
     out_list = list()
     for(i in 1:length(formulae)){
@@ -67,7 +67,7 @@ do_bma = function(model_table,
     }
     out_list
   }
-  # 6.2 weight the coefficients
+  # 2 weight the coefficients
   weighted_vcs <- function(coef_list, probs, terms){
     coef_out = NULL
     for(i in paste0("b_", terms)) {
@@ -86,7 +86,7 @@ do_bma = function(model_table,
     rownames(coef_out) <- 1:nrow(coef_out)
     coef_out
   }
-  # extract the probabilities
+  # 3 extract the probabilities
   if(!relative) {
     n = sum(model_table$`Pr(M|D)` > thresh)
     probs = model_table$`Pr(M|D)`[1:n]
@@ -98,12 +98,12 @@ do_bma = function(model_table,
     # re-scale
     probs = probs / sum(probs)
   }
-  # get the competing model VCs
+  # 4 get the competing model VCs
   f = model_table$f[1:n]
   svc_list = extract_vcs(formulae = f, terms, input_data)
   # combine
   svc <- weighted_vcs(svc_list, probs, terms)
-  # link back to input data with yhat and working residuals
+  # 4 link back to input data with yhat and working residuals
   colnames(svc) = paste0("b_", colnames(svc))
   x = (input_data[, terms[-1]])
   y = (svc[,-1])

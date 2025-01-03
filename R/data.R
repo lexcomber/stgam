@@ -33,7 +33,8 @@
 #' \describe{
 #' \item{GEOID}{The state code}
 #' \item{NAME}{The name of the state}
-#' \item{REGION}{The region}
+#' \item{REGION}{The US region}
+#' \item{AREA}{The area in km^2}
 #' \item{total_pop_10}{Population in 2010}
 #' \item{total_pop_15}{Population in 2015}
 #' }
