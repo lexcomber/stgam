@@ -156,7 +156,7 @@ res <-  calculate_vcs(model = svc.gam,
 summary(res[, paste0("b_",terms)])
 ```
 
-Standard `dplyr` and `ggplot` approaches can be used to join and map the coefficient estimates, formally $\beta_0$, $\beta_1$ and $\beta_2$) as in the figure below. Notice the North-South trend for the Intercept and the East-West and trend for Unemployment - both insignificant predictors of `privC` - and a much stronger specific spatial pattern between the target variable and Public capital (`pubC`), with particularity high coefficient estimates in the south.   
+Standard `dplyr` and `ggplot` approaches can be used to join and map the coefficient estimates ($\beta_0$, $\beta_1$ and $\beta_2$) as in the figure below. Notice the North-South trend for the Intercept and the East-West and trend for Unemployment - both insignificant predictors of `privC` - and a much stronger specific spatial pattern between the target variable and Public capital (`pubC`), with particularity high coefficient estimates in the south.   
 
 ```{r ch2svccoefs, fig.height = 7, fig.width = 7, fig.cap = "The spatially varying coefficient (SVC) estimates."}
 # join the data 
@@ -277,7 +277,7 @@ It is evident that of the 2 covariates and the intercept used to model Private c
 res |> select(starts_with("b"), year) |> 
   mutate(year = "All Years") -> tmp
 cols = c(c4a("tableau.red_gold", n = 17, reverse = T), "grey")
-tit =expression(paste(""*beta[`Private Capital`]*""))
+tit =expression(paste(""*beta[`Public Capital`]*""))
 # plot
 res |> select(starts_with("b"), year) |> 
   rbind(tmp) |> 

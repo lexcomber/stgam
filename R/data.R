@@ -6,6 +6,7 @@
 #' \describe{
 #' \item{state}{The name of the state}
 #' \item{GEOID}{The state code}
+#' \item{year}{The year of observation}
 #' \item{region}{The region}
 #' \item{pubC}{Public capital which is composed of highways and streets (hwy) water and sewer facilities (water) and other public buildings and structures (util)}
 #' \item{hwy}{Highway and streets assets}
