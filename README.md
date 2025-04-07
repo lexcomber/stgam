@@ -23,7 +23,7 @@ remotes::install_github("lexcomber/stgam", build_vignettes = TRUE, force = T)
 
 ## Example
 
-This code below loads the package and the package Imports (these have not been set as dependencies). It then undertakes and evaluates a series of spatially varying coefficient models using GAMs with GP smooths:
+This code below loads the package and undertakes the proposed workflow for a spatially varying coefficient model using GAMs with TP smooths:
 
 ```{r eval = F}
 # a spatially varying coefficient model example
@@ -38,7 +38,9 @@ rho_sp <- opt_length_scale(input_data,
        coords_x = "X",
        coords_y = "Y",
        STVC = FALSE)
-# ii) evaluate different model forms
+# have a look: these are the spatial scales of interaction
+rho_sp
+# ii) evaluate different model forms from the GAM GCV score (an unbiased risk estimator)
 svc_mods = evaluate_models(
        input_data = input_data,
        target_var = "privC",
@@ -50,7 +52,7 @@ svc_mods = evaluate_models(
 # iii) rank models and translate predicor variable indices
 mod_comp <- gam_model_scores(svc_mods)
 # have a look
-mod_comp
+mod_comp |> select(-f)
 # select best model
 f = as.formula(mod_comp$f[1])
 # put into a `mgcv` GAM model
@@ -60,4 +62,3 @@ terms = c("Intercept", "unemp", "pubC")
 vcs = calculate_vcs(input_data, m, terms)
 vcs |> select(state, year, starts_with(c("b_", "se_")))
 ```
-
