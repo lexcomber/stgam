@@ -48,7 +48,7 @@ Title Evaluates multiple models with each predictor variable specified in differ
 require(dplyr)
 # define input data
 input_data = productivity |> filter(year == 1975) |> mutate(Intercept = 1)
-# detemine length ranges
+# determine length ranges
 rho_sp <- opt_length_scale(input_data,
        target_var = "privC",
        vars = c("Intercept", "unemp", "pubC"),
