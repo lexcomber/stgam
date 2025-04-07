@@ -1,0 +1,16 @@
+stgam
+cols4all
+cowplot
+dplyr
+ggplot2
+glue
+nlme
+mgcv
+sf
+foreach
+iterators
+doParallel
+purrr
+tidyr
+knitr
+kableExtra

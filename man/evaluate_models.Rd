@@ -2,56 +2,68 @@
 % Please edit documentation in R/evaluate_models.R
 \name{evaluate_models}
 \alias{evaluate_models}
-\title{Creates and evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)}
+\title{Title Evaluates multiple models with each predictor variable specified in different ways in order to determining model form}
 \usage{
 evaluate_models(
-  input_data,
+  input_data = input_data,
   target_var = "privC",
-  covariates = c("unemp", "pubC"),
+  vars = c("unemp", "pubC"),
   coords_x = "X",
   coords_y = "Y",
   STVC = FALSE,
   time_var = NULL,
+  rho_space_vec = NULL,
+  rho_time_vec = NULL,
   ncores = 2
 )
 }
 \arguments{
-\item{input_data}{a \code{data.frame}, \code{tibble} \code{sf} containing the target variables, covariates and coordinate variables}
+\item{input_data}{he data to be used used to create the GAM model in (\code{data.frame} or \code{tibble} format), containing an Intercept column to allow it be treated as an addressable term in the model.}
 
-\item{target_var}{the name of the target variable in \code{data}}
+\item{target_var}{the name of the target variable.}
 
-\item{covariates}{the name of the covariates (predictor variables) in \code{data}}
+\item{vars}{a vector of the predictor variable names (without the Intercept).}
 
-\item{coords_x}{the name of the X, Easting or Longitude variable in \code{data}}
+\item{coords_x}{the name of the X, Easting or Longitude variable in \code{input_data}.}
 
-\item{coords_y}{the name of the Y, Northing or Latitude variable in \code{data}}
+\item{coords_y}{the name of the Y, Northing or Latitude variable in \code{input_data}.}
 
-\item{STVC}{a logical operator to indicate whether the models Space-Time (\code{TRUE}) or just Space (\code{FALSE})}
+\item{STVC}{a logical operator indicating whether the model is space-time (\code{TRUE}) or just space (\code{FALSE}) which is the default.}
 
-\item{time_var}{the name of the time variable if undertaking STVC model evaluations}
+\item{time_var}{the name of the time variable if undertaking STVC model evaluations.}
 
-\item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running \code{parallel::detectCores()-1}. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.}
+\item{rho_space_vec}{a vector of \emph{spatial} length scales from the \code{opt_length_scale} function.}
+
+\item{rho_time_vec}{a vector of \emph{temporal} length scales from the \code{opt_length_scale} function.}
+
+\item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.}
 }
 \value{
-A data table in \code{data.frame} format of all possible model combinations with each covariate specified in all possible ways, with the BIC of the model and the model formula.
+a \code{data.frame} with indices for each predictor variable, a GCV score (\code{gcv}) for each model and the associated formula (\code{f}).
 }
 \description{
-Creates and evaluates multiple varying coefficient GAM GP smooth models (SVC or STVC)
+Title Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
 }
 \examples{
-library(dplyr)
-library(glue)
-library(purrr)
-library(doParallel)
-library(mgcv)
-data("productivity")
-input_data = productivity |> filter(year == "1970")
-svc_res_gam =
-  evaluate_models(input_data = input_data,
-                  target_var = "privC",
-                  covariates = c("unemp", "pubC"),
-                  coords_x = "X",
-                  coords_y = "Y",
-                  STVC = FALSE)
-head(svc_res_gam)
+require(dplyr)
+# define input data
+input_data = productivity |> filter(year == 1975) |> mutate(Intercept = 1)
+# detemine length ranges
+rho_sp <- opt_length_scale(input_data,
+       target_var = "privC",
+       vars = c("Intercept", "unemp", "pubC"),
+       coords_x = "X",
+       coords_y = "Y",
+       STVC = FALSE)
+# evaluate different model forms
+svc_mods = evaluate_models(
+       input_data = input_data,
+       target_var = "privC",
+       vars = c("unemp", "pubC"),
+       coords_x = "X",
+       coords_y = "Y",
+       STVC = FALSE,
+       rho_space_vec = round(rho_sp$rho_space,1))
+# have a look
+head(svc_mods)
 }

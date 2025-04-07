@@ -20,3 +20,8 @@
 
 * expanded the output of `do_bma` to include averaged $\hat{y}$ and working residuals
 * returns weighted vary coefficient estimates appended to input data
+
+# stgam 1.0.0
+
+* space-time GAMs are reformatted to include Tensor Product smooths that require $\rho_{space}$ and $\rho_{time}$ to be optimised
+* modelling averaging is removed
