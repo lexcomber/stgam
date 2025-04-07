@@ -6,7 +6,7 @@
 [![R-CMD-check](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-The `stgam` package provides a framework for capturing process spatial and spatio-temporal heterogeneity, via a varying coefficient modelling approach. It provides a wrapper for GAM functionaility in the `mgcv` package and uses GAMs and Tensor Product (TP) smooths with Gaussian Process (GP) bases, with a focus on process understanding rather than prediction . The `stgam` workflow is to i) determine TP smooth length ranges with `opt_length_scale`, ii) evaluate different model forms with `evaluate_models`, iii) rank models and translate predictor variable indices with `gam_model_scores` and pick the best model, and iv) finally calculate the varying coefficient estimates.
+The `stgam` R package provides a framework for capturing process spatial and spatio-temporal heterogeneity, via a varying coefficient modelling approach. It provides a wrapper for GAM functionaility in the `mgcv` package and uses GAMs and Tensor Product (TP) smooths with Gaussian Process (GP) bases, with a focus on process understanding rather than prediction . The `stgam` workflow is to i) determine TP smooth length ranges with `opt_length_scale`, ii) evaluate different model forms with `evaluate_models`, iii) rank models and translate predictor variable indices with `gam_model_scores` and pick the best model, and iv) finally calculate the varying coefficient estimates.
 
 ## Installation
 
