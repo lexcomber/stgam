@@ -1,11 +1,12 @@
 
-# stgam
+
+# `stgam`: Spatially and Temporally Varying Coefficient Models Using Generalized Additive Models (GAMs)
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-The goal of the `stgam` package is to provide a framework for capturing process spatial and or / or temporal heterogeneity, using a varying coefficient modelling approach based on GAMs with Gaussian Process (GP) smooths.  It constructs a series of models and uses probability to determine the best model or best set of competing models. Where there in no clear 'winner', competing and highly probabale models can be combined using Bayesian Model Averaging.
+The `stgam` package provides a framework for capturing process spatial and spatio-temporal heterogeneity, via a varying coefficient modelling approach. It provides a wrapper for GAM functionaility in the `mgcv` package and uses GAMs and Tensor Product (TP) smooths with Gaussian Process (GP) bases, with a focus on process understanding rather than prediction . The `stgam` workflow is to i) determine TP smooth length ranges with `opt_length_scale`, ii) evaluate different model forms with `evaluate_models`, iii) rank models and translate predictor variable indices with `gam_model_scores` and pick the best model, and iv) finally calculate the varying coefficient estimates.
 
 ## Installation
 
@@ -23,35 +24,55 @@ remotes::install_github("lexcomber/stgam", build_vignettes = TRUE, force = T)
 
 ## Example
 
-This code below loads the package and the package Imports (these have not been set as dependencies). It then undertakes and evaluates a series of spatially varying coefficient models using GAMs with GP smooths:
+This code below loads the package and undertakes the proposed workflow for a spatially varying coefficient model using GAMs with TP smooths:
 
 ```{r eval = F}
+# a spatially varying coefficient model example
 library(stgam)
-library(cols4all)   # for nice shading in graphs and maps
-library(cowplot)    # for managing plots
-library(dplyr)      # for data manipulation 
-library(ggplot2)    # for plotting and mapping
-library(glue)       # for model construction 
-library(mgcv)       # for GAMs
-library(sf)         # for spatial data
-library(doParallel) # for parallelising operations
-library(purrr)      # for model construction
-library(tidyr)      # for model construction 
+require(dplyr)
+# define input data
+input_data = productivity |> filter(year == 1975) |> mutate(Intercept = 1)
 
-data("productivity")
-data = productivity |> filter(year == "1970")
-# create multiple models with different forms
-svc_gam =
-  evaluate_models(data = data,target_var = "privC", 
-                  covariates = c("unemp", "pubC"),
-                  coords_x = "X",
-                  coords_y = "Y",
-                  STVC = FALSE)
-# examine
-head(svc_gam)
-# calculate the probabilities for each model 
-mod_comp_svc <- gam_model_probs(svc_gam, n = 10)
+# i) determine TP smooth length ranges
+rho_sp <- opt_length_scale(input_data,
+       target_var = "privC",
+       vars = c("Intercept", "unemp", "pubC"),
+       coords_x = "X",
+       coords_y = "Y",
+       STVC = FALSE)
+# have a look: these are the spatial scales of interaction
+rho_sp
+
+# ii) evaluate different model forms from the GAM GCV score (an unbiased risk estimator)
+svc_mods = evaluate_models(
+       input_data = input_data,
+       target_var = "privC",
+       vars = c("unemp", "pubC"),
+       coords_x = "X",
+       coords_y = "Y",
+       STVC = FALSE,
+       rho_space_vec = round(rho_sp$rho_space,1))
+
+# iii) rank models and translate predicor variable indices
+mod_comp <- gam_model_scores(svc_mods)
 # have a look
-mod_comp_svc|> select(-f)
+mod_comp |> select(-f)
+# select best model
+f = as.formula(mod_comp$f[1])
+# have a look
+f
+# put into a `mgcv` GAM model
+m = gam(f, data = input_data)
+# evaluate the model
+k.check(m)
+summary(m)
+
+# iv) calculate the Varying Coefficients
+terms = c("Intercept", "unemp", "pubC")
+vcs = calculate_vcs(input_data, m, terms)
+vcs |> select(state, year, starts_with(c("b_", "se_")))
+```
+
+
 ```
 
