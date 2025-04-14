@@ -1,45 +1,41 @@
-#' US States Economic Productivity Data (1970-1985)
+#' London House Price dataset (Terraced, 2018-2024)
 #'
-#' A dataset of annual economic productivity data for the 48 contiguous US states (with Washington DC merged into Maryland), from 1970 to 1985 (17 years) in long format. The data productivity data table was extracted from the `plm` package.
+#' A dataset of a sample terraced houses sales in the London area for 2018 to 2024.
 #'
-#' @format A tibble with 816 rows and 14 columns.
+#' @format A tibble with 1906 rows and 13 columns.
 #' \describe{
-#' \item{state}{The name of the state}
-#' \item{GEOID}{The state code}
-#' \item{year}{The year of observation}
-#' \item{region}{The region}
-#' \item{pubC}{Public capital which is composed of highways and streets (hwy) water and sewer facilities (water) and other public buildings and structures (util)}
-#' \item{hwy}{Highway and streets assets}
-#' \item{water}{Water utility assets}
-#' \item{util}{Other public buildings and structures}
-#' \item{privC}{Private captial stock}
-#' \item{gsp}{Gross state product}
-#' \item{emp}{Labour input measured by the employment in non-agricultural payrolls}
-#' \item{unemp}{State unemployment rate capture elements of the business cycle}
-#' \item{X}{Easting in metres from USA Contiguous Equidistant Conic projection (ESRI:102005)}
-#' \item{Y}{Northing in metres from USA Contiguous Equidistant Conic projection (ESRI:102005)}
+#' \item{price}{The house price in £1000s}
+#' \item{priceper}{The house price per square metre in £s}
+#' \item{tfa}{Total floor area}
+#' \item{dot}{Date of transfer (sale))}
+#' \item{yot}{Year of transfer (sale)}
+#' \item{beds}{Number of bedrooms}
+#' \item{type}{House type - here all `T` (terraced)}
+#' \item{cef}{Current energy efficiency rating (values from 0-100)}
+#' \item{pef}{Potential energy efficiency rating (values from 0-100)}
+#' \item{ageb}{The age band of the house constructtion}
+#' \item{lad}{The local authority district code of the property location}
+#' \item{X}{Easting in metres derived from the geometric centroid (in OSGB projecttion - EPSG 27700) of the postcode of the sale}
+#' \item{Y}{Northing in metres derived from the geometric centroid (in OSGB projecttion - EPSG 27700) of the postcode of the sale}
 #' }
-#' @source Croissant, Yves, Giovanni Millo, and Kevin Tappe. 2022. Plm: Linear Models for Panel Data
+#' @source Chi, Bin, Dennett, Adam, Oléron-Evans, Thomas and Robin Morphet. 2025. House Price per Square Metre in England and Wales (https://data.london.gov.uk/dataset/house-price-per-square-metre-in-england-and-wales)
 #'
 #' @examples
-#' data(productivity)
-"productivity"
+#' data(hp_data)
+"hp_data"
 
-#' US States boundaries
+#' London borough boundaries
 #'
-#' A dataset of of the boundaries of 48 contiguous US states (with Washington DC merged into Maryland),  extracted from the `spData` package.
+#' A spatial dataset of of the boundaries of the 33 London Boroughs extracted from the `GWModel` package, cleaned and converted to `sf`.
 #'
-#' @format A `sf` polygon dataset with 48 rows and 6 fields.
+#' @format A `sf` polygon (MULTIPOLYGON) dataset with 33 observations and 2 fields.
 #' \describe{
-#' \item{GEOID}{The state code}
-#' \item{NAME}{The name of the state}
-#' \item{REGION}{The US region}
-#' \item{AREA}{The area in km^2}
-#' \item{total_pop_10}{Population in 2010}
-#' \item{total_pop_15}{Population in 2015}
+#' \item{name}{The name of the London borough}
+#' \item{lad}{The ONS lcoal authrority district code for the borough}
 #' }
 #' @source Bivand, Roger, Jakub Nowosad, and Robin Lovelace. 2019. spData: Datasets for Spatial Analysis. R package
+#' Lu, Binbin, Harris, Paul, Charlton, Martin, Brunsdon, Chris, Nakaya, Tomoki, Murakami, Daisuke, Hu, Yigong, Evans, Fiona H, Høglund, Hjalmar. 2024. Geographically-Weighted Models
 #'
 #' @examples
-#' data(us_data)
-"us_data"
+#' data(lb)
+"lb"
