@@ -30,7 +30,8 @@ This code below loads the package and undertakes the proposed workflow for a spa
 ``` r
 # a spatially varying coefficient model example
 library(stgam)
-require(dplyr)
+library(dplyr)
+library(ggplot2)
 
 # define input data
 data("hp_data")

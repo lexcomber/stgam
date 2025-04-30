@@ -18,6 +18,7 @@
 #' @importFrom doParallel registerDoParallel
 #' @importFrom foreach foreach
 #' @importFrom parallel stopCluster
+#' @importFrom stats formula
 #' @export
 #'
 #' @examples
