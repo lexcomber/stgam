@@ -1,11 +1,12 @@
 
+
 # `stgam`: Spatially and Temporally Varying Coefficient Models Using Generalized Additive Models (GAMs)
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lexcomber/stgam/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-The `stgam` package provides a framework for capturing process spatial and spatio-temporal heterogeneity, via a varying coefficient modelling approach. It provides a wrapper for GAM functionaility in the `mgcv` package and uses GAMs and Tensor Product (TP) smooths with Gaussian Process (GP) bases, with a focus on process understanding rather than prediction . The `stgam` workflow is to i) determine TP smooth length ranges with `opt_length_scale`, ii) evaluate different model forms with `evaluate_models`, iii) rank models and translate predictor variable indices with `gam_model_scores` and pick the best model, and iv) finally calculate the varying coefficient estimates. The background to this workflow can be found in https://doi.org/10.4230/LIPIcs.GIScience.2023.22, https://doi.org/10.1080/13658816.2023.2270285 and https://doi.org/10.3390/ijgi13120459.
+This package provides a framework for specifying spatially, temporally and spatially-and-temporally varying coefficient models using Generalized Additive Models (GAMs) with smooths. It builds on GAM functionality from the `mgcv` package. The smooths are parameterised with location, time and predictor variables. The framework supports the investigation of the presence and nature of any space-time dependencies in the data by evaluating multiple model forms (specifications) using a Generalized Cross-Validation (GCV) score. The workflow sequence is to i) prepare the data (`data.frame`, `tibble` or `sf` object) by lengthening it to have a single location and time variables for each observation. ii) evaluate all possible spatial and/or temporal models in which each predictor is specified in different ways. iii) to evaluate the models via their GCV score and to pick the best model (the one with the lowest GCV). iv) create the final model. v) calculate the varying coefficient estimates to quantify how the relationships between the target and predictor variables vary over space, time or space-time. vi) create maps, time series plots etc. For more details see: Comber et al (2023) <doi:10.4230/LIPIcs.GIScience.2023.22>, Comber et al (2024) <doi:10.1080/13658816.2023.2270285> and Comber et al (2004) <doi:10.3390/ijgi13120459>
 
 
 ## Installation
@@ -24,51 +25,56 @@ remotes::install_github("lexcomber/stgam", build_vignettes = TRUE, force = T)
 
 ## Example
 
-This code below loads the package and undertakes the proposed workflow for a spatially varying coefficient model using GAMs with TP smooths:
+This code below loads the package and undertakes the proposed workflow for a spatially varying coefficient model using GAMs with spatial smooths:
 
-```{r eval = F}
+``` r
 # a spatially varying coefficient model example
 library(stgam)
 require(dplyr)
+
 # define input data
-input_data = productivity |> filter(year == 1975) |> mutate(Intercept = 1)
+data("hp_data")
+input_data <-
+  hp_data |>
+  # create Intercept as an addressable term
+  mutate(Intercept = 1)
 
-# i) determine TP smooth length ranges
-rho_sp <- opt_length_scale(input_data,
-       target_var = "privC",
-       vars = c("Intercept", "unemp", "pubC"),
-       coords_x = "X",
-       coords_y = "Y",
-       STVC = FALSE)
-# have a look: these are the spatial scales of interaction
-rho_sp
-
-# ii) evaluate different model forms from the GAM GCV score (an unbiased risk estimator)
-svc_mods = evaluate_models(
-       input_data = input_data,
-       target_var = "privC",
-       vars = c("unemp", "pubC"),
-       coords_x = "X",
-       coords_y = "Y",
-       STVC = FALSE,
-       rho_space_vec = round(rho_sp$rho_space,1))
-
-# iii) rank models and translate predicor variable indices
-mod_comp <- gam_model_scores(svc_mods)
+# evaluate different model forms
+svc_mods <-
+  evaluate_models(
+    input_data = input_data,
+    target_var = "priceper",
+    vars = c("pef", "beds"),
+    coords_x = "X",
+    coords_y = "Y",
+    STVC = FALSE,
+    time_var = NULL,
+    ncores = 2
+  )
+# rank the models
+mod_comp <- gam_model_rank(svc_mods)
 # have a look
 mod_comp |> select(-f)
+
 # select best model
 f = as.formula(mod_comp$f[1])
-# have a look
-f
 # put into a `mgcv` GAM model
-m = gam(f, data = input_data)
-# evaluate
-k.check(m)
-summary(m)
+gam.m = gam(f, data = input_data)
 
-# iv) calculate the Varying Coefficients
-terms = c("Intercept", "unemp", "pubC")
-vcs = calculate_vcs(input_data, m, terms)
-vcs |> select(state, year, starts_with(c("b_", "se_")))
+# calculate the Varying Coefficients
+terms = c("Intercept", "pef")
+vcs = calculate_vcs(input_data, gam.m, terms)
+vcs |> select(priceper, yot, X, Y, starts_with(c("b_", "se_")), yhat)
+
+# map them
+data(lb)
+tit <-expression(paste(""*beta[`pef`]*"")) 
+ggplot() + 
+  geom_sf(data = lb, col = "lightgrey") +
+  geom_point(data = vcs, aes(x = X, y = Y, col = b_pef)) + 
+  scale_colour_continuous_c4a_div("brewer.rd_yl_bu", name = tit) +
+  theme_bw() +
+  coord_sf() +
+  xlab("") + ylab("")
+
 ```

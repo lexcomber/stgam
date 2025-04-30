@@ -2,7 +2,7 @@
 #'
 #' A dataset of a sample terraced houses sales in the London area for 2018 to 2024.
 #'
-#' @format A tibble with 1906 rows and 13 columns.
+#' @format A tibble with 1888 rows and 13 columns.
 #' \describe{
 #' \item{price}{The house price in £1000s}
 #' \item{priceper}{The house price per square metre in £s}
@@ -21,7 +21,7 @@
 #' @source Chi, Bin, Dennett, Adam, Oléron-Evans, Thomas and Robin Morphet. 2025. House Price per Square Metre in England and Wales (https://data.london.gov.uk/dataset/house-price-per-square-metre-in-england-and-wales)
 #'
 #' @examples
-#' data(hp_data)
+#' data("hp_data")
 "hp_data"
 
 #' London borough boundaries
@@ -33,9 +33,8 @@
 #' \item{name}{The name of the London borough}
 #' \item{lad}{The ONS lcoal authrority district code for the borough}
 #' }
-#' @source Bivand, Roger, Jakub Nowosad, and Robin Lovelace. 2019. spData: Datasets for Spatial Analysis. R package
-#' Lu, Binbin, Harris, Paul, Charlton, Martin, Brunsdon, Chris, Nakaya, Tomoki, Murakami, Daisuke, Hu, Yigong, Evans, Fiona H, Høglund, Hjalmar. 2024. Geographically-Weighted Models
+#' @source Lu, Binbin, Harris, Paul, Charlton, Martin, Brunsdon, Chris, Nakaya, Tomoki, Murakami, Daisuke, Hu, Yigong, Evans, Fiona H, Høglund, Hjalmar. 2024. Geographically-Weighted Models
 #'
 #' @examples
-#' data(lb)
+#' data("lb")
 "lb"

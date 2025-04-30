@@ -5,7 +5,7 @@
 \alias{hp_data}
 \title{London House Price dataset (Terraced, 2018-2024)}
 \format{
-A tibble with 1906 rows and 13 columns.
+A tibble with 1888 rows and 13 columns.
 \describe{
 \item{price}{The house price in £1000s}
 \item{priceper}{The house price per square metre in £s}
@@ -32,6 +32,6 @@ hp_data
 A dataset of a sample terraced houses sales in the London area for 2018 to 2024.
 }
 \examples{
-data(hp_data)
+data("hp_data")
 }
 \keyword{datasets}

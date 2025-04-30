@@ -23,5 +23,5 @@
 
 # stgam 1.0.0
 
-* space-time GAMs are reformatted to include Tensor Product smooths that require $\rho_{space}$ and $\rho_{time}$ to be optimised
+* space-time GAMs are reformatted to include Tensor Product smooths for combined space-time 
 * modelling averaging is removed

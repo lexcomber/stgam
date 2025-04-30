@@ -4,51 +4,52 @@
 \alias{calculate_vcs}
 \title{Extracts varying coefficient estimates (for SVC, TVC and STVC models).}
 \usage{
-calculate_vcs(input_data, model, terms)
+calculate_vcs(input_data, mgcv_model, terms = NULL)
 }
 \arguments{
 \item{input_data}{the data used to create the GAM model in \code{data.frame}, \code{tibble} or \code{sf} format}
 
-\item{model}{a GAM model with smooths created using the \code{mgcv} package}
+\item{mgcv_model}{a GAM model with smooths created using the \code{mgcv} package}
 
 \item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in \code{data} )}
 }
 \value{
-A \code{data.frame} of the input data and the coefficient and standard error estimates for each covariate.
+A \code{data.frame} of the input data and the coefficient and standard error estimates for each covariate. It can be used to generate coefficient estimates for specific time slices and over grided surfaces as described in the package vignette.
 }
 \description{
 Extracts varying coefficient estimates (for SVC, TVC and STVC models).
 }
 \examples{
 require(dplyr)
+require(doParallel)
 # define input data
-input_data = productivity |> filter(year == 1975) |> mutate(Intercept = 1)
-# determine length ranges
-rho_sp <- opt_length_scale(input_data,
-       target_var = "privC",
-       vars = c("Intercept", "unemp", "pubC"),
-       coords_x = "X",
-       coords_y = "Y",
-       STVC = FALSE)
+data("hp_data")
+input_data <-
+  hp_data |>
+  # create Intercept as an addressable term
+  mutate(Intercept = 1)
 # evaluate different model forms
-svc_mods = evaluate_models(
-       input_data = input_data,
-       target_var = "privC",
-       vars = c("unemp", "pubC"),
-       coords_x = "X",
-       coords_y = "Y",
-       STVC = FALSE,
-       rho_space_vec = round(rho_sp$rho_space,1))
-# rank models and translate predicor variable indices
-mod_comp <- gam_model_scores(svc_mods)
+svc_mods <-
+  evaluate_models(
+    input_data = input_data,
+    target_var = "priceper",
+    vars = c("pef", "beds"),
+    coords_x = "X",
+    coords_y = "Y",
+    STVC = FALSE,
+    time_var = NULL,
+    ncores = 2
+  )
+mod_comp <- gam_model_rank(svc_mods)
 # have a look
-mod_comp
+mod_comp |> select(-f)
 # select best model
 f = as.formula(mod_comp$f[1])
 # put into a `mgcv` GAM model
-m = gam(f, data = input_data)
+gam.m = gam(f, data = input_data)
 # calculate the Varying Coefficients
-terms = c("Intercept", "unemp", "pubC")
-vcs = calculate_vcs(input_data, m, terms)
-vcs |> select(state, year, starts_with(c("b_", "se_")))
+terms = c("Intercept", "pef")
+vcs = calculate_vcs(input_data, gam.m, terms)
+vcs |> select(priceper, yot, X, Y, starts_with(c("b_", "se_")), yhat)
+
 }

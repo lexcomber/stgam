@@ -5,15 +5,13 @@
 \title{Title Evaluates multiple models with each predictor variable specified in different ways in order to determining model form}
 \usage{
 evaluate_models(
-  input_data = input_data,
-  target_var = "privC",
-  vars = c("unemp", "pubC"),
-  coords_x = "X",
-  coords_y = "Y",
+  input_data,
+  target_var,
+  vars,
+  coords_x,
+  coords_y,
   STVC = FALSE,
   time_var = NULL,
-  rho_space_vec = NULL,
-  rho_time_vec = NULL,
   ncores = 2
 )
 }
@@ -32,38 +30,34 @@ evaluate_models(
 
 \item{time_var}{the name of the time variable if undertaking STVC model evaluations.}
 
-\item{rho_space_vec}{a vector of \emph{spatial} length scales from the \code{opt_length_scale} function.}
-
-\item{rho_time_vec}{a vector of \emph{temporal} length scales from the \code{opt_length_scale} function.}
-
 \item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.}
 }
 \value{
-a \code{data.frame} with indices for each predictor variable, a GCV score (\code{gcv}) for each model and the associated formula (\code{f}).
+a \code{data.frame} with indices for each predictor variable, a GCV score (\code{gcv}) for each model and the associated formula (\code{f}), which  should be passed to the \code{gam_model_rank} function.
 }
 \description{
 Title Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
 }
 \examples{
 require(dplyr)
+require(doParallel)
 # define input data
-input_data = productivity |> filter(year == 1975) |> mutate(Intercept = 1)
-# determine length ranges
-rho_sp <- opt_length_scale(input_data,
-       target_var = "privC",
-       vars = c("Intercept", "unemp", "pubC"),
-       coords_x = "X",
-       coords_y = "Y",
-       STVC = FALSE)
+data("hp_data")
+input_data <-
+  hp_data |>
+  # create Intercept as an addressable term
+  mutate(Intercept = 1)
 # evaluate different model forms
-svc_mods = evaluate_models(
-       input_data = input_data,
-       target_var = "privC",
-       vars = c("unemp", "pubC"),
-       coords_x = "X",
-       coords_y = "Y",
-       STVC = FALSE,
-       rho_space_vec = round(rho_sp$rho_space,1))
-# have a look
+svc_mods <-
+  evaluate_models(
+    input_data = input_data,
+    target_var = "priceper",
+    vars = c("pef"),
+    coords_x = "X",
+    coords_y = "Y",
+    STVC = FALSE,
+    time_var = NULL,
+    ncores = 2
+  )
 head(svc_mods)
 }

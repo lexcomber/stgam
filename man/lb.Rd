@@ -12,7 +12,6 @@ A \code{sf} polygon (MULTIPOLYGON) dataset with 33 observations and 2 fields.
 }
 }
 \source{
-Bivand, Roger, Jakub Nowosad, and Robin Lovelace. 2019. spData: Datasets for Spatial Analysis. R package
 Lu, Binbin, Harris, Paul, Charlton, Martin, Brunsdon, Chris, Nakaya, Tomoki, Murakami, Daisuke, Hu, Yigong, Evans, Fiona H, Høglund, Hjalmar. 2024. Geographically-Weighted Models
 }
 \usage{
@@ -22,6 +21,6 @@ lb
 A spatial dataset of of the boundaries of the 33 London Boroughs extracted from the \code{GWModel} package, cleaned and converted to \code{sf}.
 }
 \examples{
-data(lb)
+data("lb")
 }
 \keyword{datasets}
