@@ -1068,7 +1068,7 @@ l_grid |> cbind(res_out) |>
   ggplot() + 
   geom_sf(aes(fill = value), col = NA) +
   # adjust default shading
-  scale_fill_continuous_c4a_div("brewer.spectral", name = "Bedrooms") +
+  scale_fill_continuous_c4a_div("brewer.rd_yl_bu", name = "Bedrooms") +
   # facet
   facet_wrap(~name, ncol = 3) +
   # apply and modify plot theme
@@ -1107,7 +1107,7 @@ Similarly more of the model space could have been examined, for example to inclu
 
 ## 5. Notes, resources and summaries
 
-### 5.1 Use REML in the GAMs – Harry
+### 5.1 Use REML in the GAMs
 
 All of the space time GAM models in this vignette have been specified  with `method = "REML"`. Model estimation in GAMs can be conducted in two ways: (a) predictive (i.e., out-of-sample minimization) via Generalized Cross-Validation (GCV) and (b) Bayesian (i.e. attach priors on basis coefficients) via restricted maximum likelihood (REML). REML tends to provide more stable estimates of the smoothing parameters (i.e., reduce over-fitting) and tends to provide more robust estimates of the variance. GCV is more computationally efficient but can over-fit, especially when errors are correlated. GCV is set as the default in `mgcv`.
 
@@ -1135,13 +1135,11 @@ The rationale for using GAMs with TP smooths and GP bases for spatially varying 
 
 - GAMs with smooths (splines) capture non-linear relationships between the response variable and covariates.
 - Smooths generate a varying coefficient model when they are parameterised with more than one variable. 
-- This is readily extending to the temporal and / or spatial dimensions to generate SVCs and STVCs.
-- Different smooths are available, but i) Tensor Products smooths can be used combine space and time (because of the specification of individual length scale parameters for $\rho_{space}$ and $\rho_{time}$ in the smooth), and ii) specifying TP smooths with GP bases reflects Tobler's First Law of Geography (spatial autocorrelation and decay).
-- This can be extended to the temporal case on the assumption of temporal decay (similarity decreases over time).
-- The optimised $\rho_{space}$ and $\rho_{time}$ values provide an explicit measure of the *scales* of interaction between each target variable and the predictor variable (i.e. a multi-scale space-time analysis).
+- This is readily extending to the temporal and / or spatial dimensions to generate TVCs, SVCs and STVCs.
+- Different smooths are available, but Tensor Products smooths can be used combine space and time because they undertake anisotropic smoothing across space and time separately, that have different measurement scales.
 - GAMs are robust, have a rich theoretical background and been subject to much development.
 
-The workflow suggested in this vignette and in the `stgam` package is to first optimise the length scale parameters. This provides a direct indication of the scales of the individual target-to-predictor variable space-time (i.e. multiscale) interactions through the $\rho_{space}$ and $\rho_{time}$ parameters. Second, to then determine the most appropriate model form (both steps evaluated by minimising a Generalized Cross-Validation (GCV), an un-biased risk estimator the model recommended for evaluating `mgcv` GAMs [@wood2017generalized]). This avoids making potentially unreasonable assumptions about how space and time interact in spatially and temporally varying coefficient (STVC) models. 
+The workflow suggested in this vignette and in the `stgam` package is to determine the most appropriate model form (both steps evaluated by minimising a Generalized Cross-Validation (GCV), an un-biased risk estimator the model recommended for evaluating `mgcv` GAMs [@wood2017generalized]). This avoids making potentially unreasonable assumptions about how space and time interact in spatially and temporally varying coefficient (STVC) models. The best model can then be extracted an examined for the nature of the space-time interactions it suggests, before generating the varying coefficient estimates and mapping or plotting the results. 
 
 Future developments will seek to examine the scales of spatial dependencies in the data sing kriging based approaches and will extend the `stgam` package to work with large data (i.e. to draw from the functionality of the `gamm` function in `mgcv`).
 
