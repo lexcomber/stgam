@@ -128,14 +128,13 @@ help(lb)
 
 ```{r declare_new_fucntions, eval = T, echo = F}
 # new functions
-library(doParallel)
 evaluate_models <- function(
     input_data,
     target_var,
     vars,
     coords_x,
     coords_y,
-    STVC = FALSE,
+    VC_type = "SVC",
     time_var = NULL,
     ncores = 2)
 {
@@ -150,12 +149,22 @@ evaluate_models <- function(
 
   # function to get model predictor terms
   get_form_covariate <- function(varname, index) {
-     c("",
+    c("",
       glue("+ {varname}"),
       glue("+s({coords_x},{coords_y},by={varname})"),
       glue("+s({time_var},by={varname})"),
       glue("+s({coords_x},{coords_y},by={varname}) + s({time_var},by={varname})"),
       glue("+t2({coords_x},{coords_y},{time_var},d=c(2,1),by={varname})"))[index]
+  }
+
+  # function to make TVC index grid
+  make_tvc_index_grid <- function(vars) {
+    expression_x <- "expand.grid(Intercept = 1:2"
+    for (i in vars) {
+      expression_x <- paste0(expression_x, ",", i, " = c(1,2,4)")
+    }
+    expression_x <- paste0(expression_x, ")")
+    eval(parse(text = expression_x))
   }
 
   # function to make SVC index grid
@@ -188,7 +197,7 @@ evaluate_models <- function(
     }
     return(formula(form.i))
   }
-  
+
   # function to generate GAM TP smooth model formula
   evaluate_gam <- function(i, terms_grid, input_data, ...) {
     indices <- unlist(terms_grid[i, ])
@@ -200,11 +209,15 @@ evaluate_models <- function(
     f <- paste0(target_var, " ~ ", as.character(f)[3])
     return(data.frame(index, gcv,f))
   }
- 
+
   # 1. make the terms grid
-  if (!STVC) {
+  if (VC_type == "SVC") {
     terms_grid <- make_svc_index_grid(vars)
-  } else {
+  }
+  if (VC_type == "TVC") {
+    terms_grid <- make_tvc_index_grid(vars)
+  }
+  if (VC_type == "STVC") {
     terms_grid <- make_stvc_index_grid(vars)
   }
 
@@ -897,7 +910,8 @@ The `evaluate_models()` function in the `stgam` package constructs and compares 
 
 
 
-```{r eval_stvc, eval = T, cache = T}
+```{r eval_stvc, eval = T, cache = T, warning=F, message=F}
+library(doParallel)
 t1 <- Sys.time()
 stvc_mods <- evaluate_models(
   input_data = hp_data,
@@ -905,7 +919,7 @@ stvc_mods <- evaluate_models(
   vars = c("pef", "beds"),
   coords_x = "X",
   coords_y = "Y",
-  STVC = TRUE,
+  VC_type = "STVC",
   time_var = "days",
   ncores = 2)
 Sys.time() - t1  # about 14 minutes (6 minutes with 15 cores!)
