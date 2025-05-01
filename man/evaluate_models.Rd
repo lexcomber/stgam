@@ -10,7 +10,7 @@ evaluate_models(
   vars,
   coords_x,
   coords_y,
-  STVC = FALSE,
+  VC_type = "SVC",
   time_var = NULL,
   ncores = 2
 )
@@ -26,7 +26,7 @@ evaluate_models(
 
 \item{coords_y}{the name of the Y, Northing or Latitude variable in \code{input_data}.}
 
-\item{STVC}{a logical operator indicating whether the model is space-time (\code{TRUE}) or just space (\code{FALSE}) which is the default.}
+\item{VC_type}{the type of varying coefficient model: options are "TVC" for temporally varying, "SVC" for spatially varying  and "STVC" for space-time .}
 
 \item{time_var}{the name of the time variable if undertaking STVC model evaluations.}
 
@@ -55,7 +55,7 @@ svc_mods <-
     vars = c("pef"),
     coords_x = "X",
     coords_y = "Y",
-    STVC = FALSE,
+    VC_type = "SVC",
     time_var = NULL,
     ncores = 2
   )

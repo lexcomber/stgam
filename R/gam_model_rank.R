@@ -29,7 +29,7 @@
 #'     vars = c("pef", "beds"),
 #'     coords_x = "X",
 #'     coords_y = "Y",
-#'     STVC = FALSE,
+#'     VC_type = "SVC",
 #'     time_var = NULL,
 #'     ncores = 2
 #'   )

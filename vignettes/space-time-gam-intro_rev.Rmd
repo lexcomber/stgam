@@ -1,0 +1,1152 @@
+---
+title: "A geographer's introduction to space-time regression with GAMs using `stgam`"
+author: "Lex Comber, Paul Harris and Chrs Brunsdon"
+date: "April 2025"
+output: rmarkdown::html_vignette
+bibliography: vignette.bib
+header-includes:
+   - \usepackage{caption}
+
+vignette: >
+  %\VignetteIndexEntry{A geographer's introduction to space-time regression with GAMs using `stgam`}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+
+---
+
+\captionsetup{width=5in}
+
+```{r, include = FALSE}
+library(knitr)
+# library(kableExtra)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  options(width = 120)
+)
+```
+
+```{r eval = F, echo = F}
+#### Data Prep
+# install.packages("stgam", dependencies = TRUE)
+# remotes::install_github("lexcomber/stgam")
+# load the package
+# library(stgam)
+library(sf)
+library(dplyr)
+library(tidyverse)
+# load the data 
+setwd("~/Dropbox/Lex_GGP_GAM/stgam/")
+## see data_prep_stgam_v1.0.0.R fgor data creation
+load("vignettes/hp_data.RData")
+load("vignettes/lb.RData")
+# data(productivity)
+# data(us_data) 
+## LB data 
+london_boroughs <- data.frame(
+  Borough <- c(
+    "City of London", "Barking and Dagenham", "Barnet", "Bexley", "Brent",
+    "Bromley", "Camden", "Croydon", "Ealing", "Enfield", "Greenwich",
+    "Hackney", "Hammersmith and Fulham", "Haringey", "Harrow", "Havering",
+    "Hillingdon", "Hounslow", "Islington", "Kensington and Chelsea",
+    "Kingston upon Thames", "Lambeth", "Lewisham", "Merton", "Newham",
+    "Redbridge", "Richmond upon Thames", "Southwark", "Sutton", "Tower Hamlets",
+    "Waltham Forest", "Wandsworth", "Westminster"
+  ),
+  LAD_Code <- c(
+    "E09000001", "E09000002", "E09000003", "E09000004", "E09000005",
+    "E09000006", "E09000007", "E09000008", "E09000009", "E09000010", "E09000011",
+    "E09000012", "E09000013", "E09000014", "E09000015", "E09000016",
+    "E09000017", "E09000018", "E09000019", "E09000020",
+    "E09000021", "E09000022", "E09000023", "E09000024", "E09000025",
+    "E09000026", "E09000027", "E09000028", "E09000029", "E09000030",
+    "E09000031", "E09000032", "E09000033"
+  ),
+  stringsAsFactors = FALSE
+)
+# plot(st_geometry(lb))
+# tidying
+lb$name <- as.character(lb$NAME)
+index <- which(lb$name == "South Bucks")
+lb <- lb[-index, ]
+index <- which(lb$name == "Thurrock")
+lb <- lb[-index, ]
+index <- which(lb$name == "City of Westminster")
+lb$name[index] = "Westminster"
+# checking
+# dim(lb)
+# sort(lb$name)
+# dim(london_boroughs )
+# sort(london_boroughs$Borough)
+# head(lb)
+# joining
+lb <- lb |> inner_join(london_boroughs, by = c("name" = "Borough")) |> 
+  mutate(lad = LAD_Code) |>
+  select(name, lad)
+#### final creation  
+usethis::use_data(lb)
+
+## 2. HP data 
+# get rid of observations outside lb
+hp_sf <- st_as_sf(hp_data, coords = c("X", "Y"), crs = 27700)
+int <- st_intersects(hp_sf, lb, sparse = F)
+index <- which(rowSums(int) == 0)
+hp_sf[index,]
+sort(unique(lb$lad))
+hp_data <- hp_data[-index,]
+#### final creation  
+# usethis::use_data(hp_data)
+usethis::use_data(hp_data, overwrite = TRUE)
+```
+
+## Overview
+
+The `stgam` package [@stgam] provides a wrapper around `mgcv` functionality [@mgcv] to support space-time analysis, with a focus on both prediction but also importantly on inference (or process understanding). The latter is commonly the objective of geographical analysis, which are often concerned with how processes and statistical relationships vary over space and / or time. 
+
+This vignette illustrates a workflow for analyses to quantify and model variations over space and time based on GAM smooths. The case study examines house price  (actually price per unit area) for terraced houses in London 2018 to 2024. The workflow suggests a process of moving through the data to X, Y, Z
+
+You should load the `stgam` package and the data. The data are sample of terraced house sales data for 2018 to 2024 extracted from https://data.london.gov.uk/dataset/house-price-per-square-metre-in-england-and-wales, and located via the ONS lookup tables that allows UK postcodes to be linked to location (actually the geometric centroids of the postcode area).
+
+```{r loadpackages, warning = F, message = F, results=F}
+library(cols4all)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(sf)
+library(cowplot)
+# load the package and data
+library(stgam)
+data("hp_data")
+data("lb")
+```
+
+You should examine the help for the datasets and especially the variables that `hp_data` contains:
+```{r eval = F, warning = F, message = F}
+help(hp_data)
+help(lb)
+```
+
+```{r declare_new_fucntions, eval = T, echo = F}
+# new functions
+evaluate_models <- function(
+    input_data,
+    target_var,
+    vars,
+    coords_x,
+    coords_y,
+    VC_type = "SVC",
+    time_var = NULL,
+    ncores = 2)
+{
+  # function to get model intercept terms
+  get_form_intercept <- function(index) {
+    c("",
+      glue("+s({coords_x},{coords_y},by=Intercept)"),
+      glue("+s({time_var},by=Intercept)"),
+      glue("+s({coords_x},{coords_y},by=Intercept) + s({time_var},by=Intercept)"),
+      glue("+t2({coords_x},{coords_y},{time_var},d=c(2,1),by=Intercept)"))[index]
+  }
+
+  # function to get model predictor terms
+  get_form_covariate <- function(varname, index) {
+    c("",
+      glue("+ {varname}"),
+      glue("+s({coords_x},{coords_y},by={varname})"),
+      glue("+s({time_var},by={varname})"),
+      glue("+s({coords_x},{coords_y},by={varname}) + s({time_var},by={varname})"),
+      glue("+t2({coords_x},{coords_y},{time_var},d=c(2,1),by={varname})"))[index]
+  }
+
+  # function to make TVC index grid
+  make_tvc_index_grid <- function(vars) {
+    expression_x <- "expand.grid(Intercept = 1:2"
+    for (i in vars) {
+      expression_x <- paste0(expression_x, ",", i, " = c(1,2,4)")
+    }
+    expression_x <- paste0(expression_x, ")")
+    eval(parse(text = expression_x))
+  }
+
+  # function to make SVC index grid
+  make_svc_index_grid <- function(vars) {
+    expression_x <- "expand.grid(Intercept = 1:2"
+    for (i in vars) {
+      expression_x <- paste0(expression_x, ",", i, " = 1:3")
+    }
+    expression_x <- paste0(expression_x, ")")
+    eval(parse(text = expression_x))
+  }
+
+  # function to make STVC index grid
+  make_stvc_index_grid <- function(vars) {
+    expression_x <- "expand.grid(Intercept = 1:5"
+    for (i in vars) {
+      expression_x <- paste0(expression_x, ",", i, " = 1:6")
+    }
+    expression_x <- paste0(expression_x, ")")
+    eval(parse(text = expression_x))
+  }
+
+  # function to make GAM model formula
+  get_formula <- function(indices) {
+    form.i <- glue("{target_var}~Intercept-1")
+    form.i <- paste0(form.i, get_form_intercept(indices[1]))
+    for (j in 1:length(vars)) {
+      varname <- vars[j]
+      form.i <- paste0(form.i, get_form_covariate(varname, indices[j+1]))
+    }
+    return(formula(form.i))
+  }
+
+  # function to generate GAM TP smooth model formula
+  evaluate_gam <- function(i, terms_grid, input_data, ...) {
+    indices <- unlist(terms_grid[i, ])
+    f <- get_formula(indices)
+    input_data <- mutate(input_data, Intercept = 1)
+    m <- gam(f, data = input_data, method = "REML")
+    gcv <- m$gcv.ubre
+    index <- data.frame(terms_grid[i, ])
+    f <- paste0(target_var, " ~ ", as.character(f)[3])
+    return(data.frame(index, gcv,f))
+  }
+
+  # 1. make the terms grid
+  if (VC_type == "SVC") {
+    terms_grid <- make_svc_index_grid(vars)
+  }
+  if (VC_type == "TVC") {
+    terms_grid <- make_tvc_index_grid(vars)
+  }
+  if (VC_type == "STVC") {
+    terms_grid <- make_stvc_index_grid(vars)
+  }
+
+  # 2. evaluate each model
+  if (nrow(terms_grid) < 30) {
+    vc_res_gam <- NULL
+    for(i in 1:nrow(terms_grid)) {
+      res.i = evaluate_gam(i, terms_grid, input_data)
+      vc_res_gam = rbind(vc_res_gam, res.i)
+    }
+  } else {
+    cl = makeCluster(ncores)
+    registerDoParallel(cl)
+    vc_res_gam <-
+      foreach(i = 1:nrow(terms_grid),
+              .combine = 'rbind',
+              .packages = c("glue", "mgcv", "purrr", "dplyr")) %dopar% {
+                evaluate_gam(i, terms_grid,  input_data,
+                             target_var, covariates, coords_x, coords_y, time_var)
+              }
+    stopCluster(cl)
+  }
+  return(vc_res_gam)
+}
+
+gam_model_rank <- function(res_tab, n = 10) {
+  Rank <- NULL
+  GVC <- NULL
+  nm <- names(res_tab)
+  len <- length(nm)
+  mod_comp <- rename(tibble(res_tab), GCV = gcv) |> arrange(GCV)
+  int_terms <- function(x) c("Fixed", "s_S", "s_T", "s_T + s_S", "t2_ST")[x]
+  var_terms <- function(x) c("---", "Fixed", "s_S", "s_T", "s_T + s_S", "t2_ST")[x]
+  out_tab <- 
+    mutate(
+      mutate(
+        slice_head(mod_comp, n = n), 
+        across(nm[2]:nm[len - 2], var_terms)), 
+      across(nm[1]:nm[1], int_terms)) |>
+    mutate(Rank = 1:n()) |>
+    dplyr::relocate(Rank)
+  return(out_tab)
+}
+
+calculate_vcs <- function (input_data, mgcv_model, terms = NULL) {
+    . = NULL
+    if(is.null(terms)) {
+      n_t = 1
+    } else {
+      n_t = length(terms)
+    }
+    input_data_copy = input_data
+    output_data = input_data
+    for (i in 1:n_t) {
+        zeros = rep(0, n_t)
+        zeros[i] = 1
+        terms_df = data.frame(matrix(rep(zeros, nrow(input_data)), 
+            ncol = n_t, byrow = T))
+        names(terms_df) = terms
+        input_data_copy[, terms] = terms_df
+        se.j = predict(mgcv_model, se = TRUE, newdata = input_data_copy)$se.fit
+        b.j = predict(mgcv_model, newdata = input_data_copy)
+        expr1 = paste0("b_", terms[i])
+        expr2 = paste0("se_", terms[i])
+        output_data[[expr1]] <- as.vector(unlist(with(output_data, b.j)))
+        output_data[[expr2]] <- as.vector(unlist(with(output_data, se.j)))
+    }
+    if( all(terms %in% names(input_data))) {
+      output_data$yhat = predict(mgcv_model, newdata = input_data)
+    }
+    return(output_data)
+}
+```
+
+## 1. Data considerations
+
+The first stage is simply examine the data, particularly the continuous variables over space and time. The code below examines the data and undertakes some initial investigations.
+
+```{r eval = T}
+# examine what is loaded 
+hp_data
+```
+
+The print out of the first 10 records in `hp_data` indicates that we have a time variable (`dot`) in date format as well as location in metres (`X` and `Y`). The analyses will model price per unit area (the `priceper` variable in `hp_data`). This is in units of pounds per spare metre and GAM smooth models will be constructed that regress this against other variables in the data including location and time. 
+
+However, it often more useful to have a continuous scalar value for the time variable, in this case the date of sale transfer (`dot`), and to have location in kilometres rather than metres. The code below uses the earliest date in the dataset to create a variable called `days` to represent time (here 100s of days since the earliest date) and rescales the locational data, but retaining the original coordinates for mapping: 
+```{r}
+hp_data <- 
+  hp_data |> 
+  # create continuous time variable
+  mutate(days = as.numeric(dot - min(dot))/100) |>
+  relocate(days, .after = dot) |>
+  # scale location and retain original coordinates
+  mutate(Xo = X, Yo = Y) |>
+  mutate(X = X/1000, Y = Y/1000)
+```
+Again this can be examined:
+```{r eval = F}
+hp_data
+```
+
+The data and the target variable can be mapped as in the code snippet below. Note the use of the `Xo` and `Yo` coordinates in the mapping with `ggplot`.
+```{r dataplot, fig.height = 4, fig.width = 7, fig.cap = "The spatial variation of the `priceper` variable (house price per square metre in £s)."}
+# map the data layers
+lb |> 
+  ggplot() + geom_sf() +
+  geom_point(data = hp_data |> st_drop_geometry(), aes(x = Xo, y = Yo, col = priceper)) +
+  scale_color_viridis_c(option = "magma") +
+  theme_bw()  +xlab("") + ylab("")
+```
+
+The map above shows the spatial distribution of `priceper` and also indicates that there were no terraced house sales in the centre of London (in the City of London local authority district) in this period. In many of the analyses below the `lb` spatial dataset of London boroughs will be used to provide spatial context to the results. To do this the coordinates fo the spatial data need to be rescaled in the same way the `X` and `Y` variables in `hp_data` were rescaled to aid model construction. The code below creates a rescaled version of the `lb` projected in kilometres (remember the original data can always be reloaded using `data(lb)`).
+
+```{r, message = F, warning=F}
+#transform to km
+lb <- st_transform(lb, pipeline = "+proj=pipeline +step +proj=unitconvert +xy_out=km")
+# remove the projection to avoid confusing ggplot
+st_crs(lb) <- NA
+```
+
+The correlations and distributions of the numeric variables can be examined. This is important in order to establish that any regression of the proposed target variable against the predictor variables may yield something interesting and sensible, and just as importantly to identify any variables that might be a problem when trying to make a model. For example, in this case it is good that the proposed target variable (`priceper`) has a healthy tail. 
+
+The code below generates boxplots and then histograms.
+
+```{r databox, fig.height = 5, fig.width = 8, fig.cap = "Boxplots of the numeric variables in the data."}
+# boxplots
+hp_data |> 
+  select(lad, price, priceper, tfa, days, beds, cef, pef, X, Y) |>
+  pivot_longer(-lad) |>
+  ggplot(aes(x = value), fil) + 
+  geom_boxplot(fill="dodgerblue") +
+  facet_wrap(~name, scales = "free") +
+  theme_bw()
+```
+
+```{r datahist, fig.height = 5, fig.width = 8, fig.cap = "Histograms of the numeric variables in the data."}
+# histograms
+hp_data |> 
+  select(lad, price, priceper, tfa, days, beds, cef, pef, X, Y) |>
+  pivot_longer(-lad) |>
+  ggplot(aes(x = value), fil) + 
+  geom_histogram(aes(y=after_stat(density)),bins = 30, 
+                 fill="tomato", col="white") +
+  geom_density(alpha=.5, fill="#FF6666") +
+  facet_wrap(~name, scales = "free") +
+  theme_bw()
+```
+
+Examining correlations is for similar reasons: to check for issues that may be a problem later on in the analysis workflow. Here the aim is to establish that there are reasonable correlations with the target variable and lack of collinearity amongst the predictor variables, when they are examined without considering time or space (i.e. they are examined globally). 
+
+```{r correls}
+# correlations
+hp_data |> 
+  select(priceper, price, tfa,  beds, cef, pef) |>
+  cor() |> round(3)
+```
+ 
+Finally, thinking about space-time analysis of *your* dataset, as a general heuristic, any dataset for use in space-time analysis should have a minimum of about 100 locations and a minimum of 50 observation time periods. You should consider this when you are assembling your data. 
+
+
+## 2. Detecting variability
+
+The investigations in the previous section were all concerned with establishing the viability of undertaking the proposed analysis, using standard exploratory data analysis approaches to understand distributions and correlations. In this section these are extended to test for the presence of variability in the data but this now over time, space and space-time. This is done by constructing a series of regression models, of different forms and with different parameters. Tools for constructing Generalized Additive Models (GAMs) using the `mgcv` package [@mgcv] are introduced but with particular focus on examining using GAM smooths or splines to explore variations over space and time.   
+
+### 2.1 Initial investigations with OLS and dummy variables
+
+As an initial baseline model, the code below creates a standard OLS regression model of `priceper` using the `lm` function. The model fit is weak, but the model summary indicates that the some of the variables (`pef` and `beds`) are significant predictors of the target variable. The analysis of variance (ANOVA), calculated using the `anova` function, shows how much variance in `priceper` is explained by each predictor and whether that contribution is statistically significant. Here higher values in the `F value` test statistic provides stronger evidence the predictor is useful. 
+
+So there is evidence that all three predictors (`cef`, `pef`, `beds`) are statistically significant and the F-values and associated p-values (`Pr(>F)`) show strong evidence that each variable contributes meaningfully to explaining variation in `priceper`. The model likely has decent explanatory power, assumptions of no major issues like multicollinearity.
+
+```{r ols}
+# an OLS model
+m_ols <- lm(priceper ~ cef + pef + beds, data = hp_data)
+summary(m_ols)
+anova(m_ols)
+```
+
+A final and quick trick to confirm the presence of space and time effects is to use them as a dummy variable with one of the variables. Here this is done with `tfa` (total floor area) that unsurprisingly is highly correlated with the target variable (`priceper`): 
+```{r eval = F}
+# Dummy with LADs
+m_dummy1 <- lm(priceper ~ tfa:lad, data = hp_data)
+summary(m_dummy1)
+anova(m_dummy1)
+```
+This shows that there are important and significant differences between the first London borough (which has a `lad` value equal to "E09000001") that is not shown in the model summary and many of the the rest that are, suggesting some important spatial differences in the interaction of floor area and price in different boroughs. This is confirmed by the F values in the ANOVA. 
+
+```{r eval = F}
+# Dummy with Time
+m_dummy2 <- lm(priceper ~ tfa:days, data = hp_data)
+summary(m_dummy2)
+anova(m_dummy2)
+```
+
+Similarly, an even larger effect with time is demonstrated when `days` is used as the dummy variable. 
+
+Thus, despite the models being globally weak with low $R^2$ values, there is evidence of spatial and temporal interactions with the target variable that warrant further more formal exploration with respect to potential temporal and spatial trends. GAMs with smooths offer a route to investigate these.
+
+
+### 2.2 Detecting variability using GAM smooths
+
+GAMs with splines (or smooths - the terms are used interchangeably) can be used to explore and quantify spatial and temporal variations. However before considering spatial and temporal aspects, it is important to outline what splines do. 
+
+Splines help to fit a (smooth) curve through a cloud of messy data points — like drawing a line that follows a winding mountain road. They generate flexible (bendy) fits (curves) that are able to adapt to the shape of your data, and thus describe the relationship between variables better than a straight line. For example, consider the scatterplot of some simulated data below: it would be difficult to fit a straight line through it.   
+
+```{r simplot, fig.height = 4, fig.width = 7, fig.cap = "Simulated `x` and `y` data."}
+# create simulated data 
+set.seed(12)
+x  <- runif(500)
+mu <- sin(2 * (4 * x - 2)) + 2 * exp(-(16 ^ 2) * ((x - .5) ^ 2))
+y  <- rnorm(500, mu, .3)
+# plot x and y
+ggplot() + 
+	geom_point(aes(x,y)) +
+  theme_bw()
+```
+
+The code below uses a GAM spline to determine the relationship between `x` and `y` without having to pre-specify any particular form (e.g. quadratic, exponential etc). The bendiness or wiggliness of the fit is determined automatically by the `s` function in different ways depending on the type of smooth (via penalization and basis functions for thin plate smooths, the default and in smooths created using `s` in the `mgcv` package). Effectively what this does is split the data into chunks and fit piecewise polynomial relationships (rather than fitting a single straight line).
+
+```{r simgamplot, fig.height = 4, fig.width = 7, fig.cap = "Simulated `x` and `y` data with GAM a Spline fitted."}
+# a GAM illustration with a spline using s
+gam_s_example <- gam(y~s(x))
+# extract the smooth fit
+y.s <- gam_s_example$fitted.values
+# plot
+ggplot() +
+  geom_point(aes(x,y), col = "grey") +
+	geom_line(aes(x, y = y.s), lwd = 1) +
+  theme_bw()
+```
+
+The purpose of this diversion into splines and smooths is to illustrate how they model different (slopes) relationships with `y` in different locations along the `x` feature space. In this way spline smooth curves can be used to capture non-linear relationships in attribute space (here the relationship of `x` with `y`). Importantly, in the context of space-time varying coefficient modelling with `stgam`, the spline can be used to model how relationships between `x` and `y` varies with respect to time or location if the smooth is also parameterised with those.
+
+### 2.3 Temporal variability
+
+It would be useful to examine the how the target variable, `priceper`, varies over time. One way of doing this is to extend the use GAM smooths illustrated above. The code snippet below seek to model the variation in `priceper` but this time using time (the `days` variable).   
+
+```{r gam.1}
+# the first GAM 
+gam.1 <- gam(priceper~s(days), data = hp_data)
+summary(gam.1)
+```
+The smooth can be investigated by plotting it with time. Note the use of the actual data variable `dot` rather than `days` in the code below - this is simply to have a friendly x-axis on the plot! - and the use of the `predict` function to extract the standard errors:
+ 
+```{r smoothplot1, fig.height = 4, fig.width = 7, fig.cap = "A plot of the temporal smooth."}
+# create a data frame with x, predicted y, standard error
+x <- hp_data$dot
+y <- gam.1$fitted.values
+se <- predict(gam.1, se = TRUE, hp_data)$se.fit
+u <- y+se
+l <- y-se
+df <- data.frame(x, y, u, l)
+# plot!
+ggplot(df, aes(x, y, ymin = l, ymax = u)) + 
+  geom_ribbon(fill = "lightblue") + 
+  geom_line() + 
+  theme_bw() + 
+  xlab("Date") + ylab("priceper") 
+```
+
+This shows variation in the modelled relationship of `priceper` with time. The code above extracted the predicted values ($\hat{y}$) of `priceper` from the model and plotted them against time, but using the actual date not the continuous variable. The plot shows how the relationship of the target variable varies with time and potentially reflecting the effects over the pandemic, with increases in the value of homes with there own gardens and outdoor spaces (even small ones!) rather than apartments or flats. This provides confirmation of the potential suitability of a temporal analysis of `priceper`. 
+
+### 2.4 Spatial variability
+
+The spatially varying trends can be examined in similar way, again using a standard `s` spline with location.   
+
+```{r smoothplot2, fig.height = 5, fig.width = 7, fig.cap = "A `mgcv` plot of the spatial smooth."}
+# the second GAM
+gam.2 <- gam(priceper~s(X,Y), data = hp_data)
+summary(gam.2)
+plot(gam.2, asp = 1)
+```
+
+Notice that the model fit ($R^2$) has increased substantially from the previous models. This suggest that this variable does vary over space. Again the smooth can be investigated by plotting, but this time rather than a line it is 2-Dimensional surface. However, it would be useful to to visualise this as a surface rather than just over the `hp_data` point locations. The code below uses the `predict` function used to model the relationship over a hexagonal grid covering the extent of the London boroughs, with values for `X` and `Y` of the centroid of hexagonal cell, and plots the surface over geographic space:
+```{r create_lgrid}
+# 1. create a grid object the study area from the LB  data
+l_grid <- 
+  st_make_grid(lb, square=FALSE,n=50) |> 
+  st_sf() |> 
+  st_join(lb) |> 
+  filter(!is.na(name))
+# rename the geometry, sort row names 
+st_geometry(l_grid) = "geometry"
+rownames(l_grid) <- 1:nrow(l_grid)
+# create and add coordinates X and Y
+coords <- l_grid |> st_centroid() |> st_coordinates() 
+l_grid <- l_grid |> bind_cols(coords) 
+```
+
+You may wish to inspect this object:
+```{r eval = F}
+l_grid
+plot(st_geometry(l_grid))
+```
+
+Before continuing with the mapping procedure:
+```{r smoothplot2a, fig.height = 5, fig.width = 7, fig.cap = "A map of the smoothed (predicted) response variable over hexagon grid."}
+# 2. predict over the grid
+yhat <- predict(gam.2, newdata = l_grid)
+l_grid |> mutate(yhat = yhat) |>
+  # 4.and plot
+  ggplot() + 
+  geom_sf(aes(fill = yhat), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_seq("brewer.yl_or_rd", name = "priceper") +
+  # add context
+  geom_sf(data = lb, fill = NA) +
+  # apply and modify plot theme
+  theme_bw() +
+  theme(legend.position = "bottom",
+        legend.key.width = unit(1, "cm"))
+```
+
+This models the spatial trends in the variations over space of the target variable. The results indicate similar high relationships with space in the centre of the study area as in the initial map of the data earlier, and again provides confirmatory evidence that the some spatially explicit modelling of `priceper` is appropriate in this case. 
+
+
+### 2.5 Spatial and temporal variability I
+
+The spline can be extends to model the target variable in space-time by including the location and time variables in the smooth. However, a slight different set of considerations are required because we are mixing space and time in the `mgcv` smooths. Consider the code snippet below for the extension into space-time smooths: it specifies a smooth using the `t2` function rather than `s` and contains other parameters in the `d` argument. 
+
+```{r gam.3}
+# the third GAM
+gam.3 <- gam(priceper~t2(X,Y,days, d = c(2,1)), data = hp_data)
+summary(gam.3)
+```
+
+It is important to consider the difference between `s(X,Y,days)` (which would a continuation of the format above but has not been run) and `t2(X,Y,days,d=c(2,1))` before examining the resultant GAM (`gam.3`). The spline functions `s()` and `t2()` can model smooth interactions between multiple variables, they handle dimension scaling, marginal smoothness, and basis construction in different ways. 
+
+- `s()` is an *Isotropic smooth* and is used when all variables are on the same scale and have similar smoothness behaviours (like `X` and `Y`). By default it uses a thin plate regression spline (`bs = "tp"`) and a single basis to model the attribute space. The formulation `s(X,Y,days)` would therefore use a single basis to model a smooth in 3D space, under the assumption that all the variables (`X`, `Y` and `days`) contribute in the same way and at the same scale to the smooth. This is fine if the variables were numeric, continuous, and in comparable units such as percentages. But not space and time. 
+
+- `t2()` is a *Tensor Product (TP) smooth*	and is used when variables are on different scales or represent different kinds of effects (like `X` and `Y`, with `days`). It builds a smooth using separate basis functions for each variable and then combines them. The formulation `t2(X,Y,days,d=c(2,1))` includes the `d` parameter that specifies the dimensions of each basis, a 2D basis is specified for `X` and `Y` and a 1D basis for `days`. The tensor product smooth is constructed by constructing (marginal) smooths for each variable and taking the tensor product of those to form the joint smooth. It is useful when the variables have different scales or units (e.g., `X` and `Y` are coordinates, `days` is time) and different degrees of smoothness are expected along each variable.
+
+Thus in this case the TP smooth is specified because space and time are combined. The code below examines the results and uses the `mgcv` plot function to show the spatial distributions over 9 discretised time chunks (~310 days). 
+
+```{r eval = F}
+plot(gam.3, asp = 1)
+```
+
+However it is also possible to slice and dice the time variable in other ways. The code snippet below illustrates how this can be done for 365 day periods using the `calculate_vcs` function in the `stgam` package. If predictor variables are included in the `terms` parameter then the function coefficient estimates ("b_") and standard errors ("se_") for each of terms specified. However, in this case we are just interested in the predicted value of the target variable, `yhat`. The code below uses the grid object created above (`l_grid`) as a spatial framework to hold the prediction of the `priceper` variable over these discrete time periods.
+```{r smoothplot3, fig.height = 6, fig.width = 7, fig.cap = "A plot of a spatial smooth over 7 approximately annual time periods."}
+# 1. create time intervals (see the creation of days variable above)
+pred_days = seq(0, 2190, 365)/100
+# 2. create coefficient estimates for each time period (n = 7) 
+res_out <- NULL
+for (i in pred_days){
+  res.i <- calculate_vcs(input_data = l_grid |> mutate(days = i),
+                         mgcv_model = gam.3,
+                         terms = NULL)
+  res_out <- cbind(res_out, res.i$yhat)
+}
+# 3. name with years and join to the grid
+colnames(res_out) <- paste0("Y_", 2018:2024)
+
+l_grid |> cbind(res_out) |>
+  # select the variables and pivot longer
+  select(-name, -lad, -X, -Y) |>
+  pivot_longer(-geometry) |>
+  # make the new days object a factor (to enforce plotting order)
+  mutate(name = factor(name, levels = paste0("Y_", 2018:2024))) |>
+  
+  # 4. and plot 
+  ggplot() + 
+  geom_sf(aes(fill = value), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_seq("brewer.yl_or_rd", name = "Predicted \n'priceper'") +
+  # facet
+  facet_wrap(~name, ncol = 3) +
+  # apply and modify plot theme
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.direction = "horizontal",
+    legend.position.inside = c(0.7, 0.15), 
+	  legend.text=element_text(size=10),
+	  legend.title=element_text(size=12),
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+	  legend.key.width = unit(1.5, "cm"),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank())   
+```
+
+What this time series set of maps show is that without any exploratory variables, the trends in `priceper` vary spatially and change in intensity over time (the increase and decrease in values over space), with limited variation in their spatial pattern.  
+
+### 2.6 Spatial and temporal variability II
+
+The formula used to construct the `gam.3` model in the previous subsection constructed a smooth that implicitly combined space and time, under an assumption that the variations in space and time of `priceper` interact with each other. However this may not be the case. More generally spatial and temporal dependencies might not be expected to interact in data for relatively small region, whose observations might be expected to be subject to the same socio-economic or environmental pressures. Instead, any space and time effects might be expected to be *independent* of each other. Whereas in a national study any space and time effects might be expected to *interact* more strongly.
+
+It is possible to use a different construction involving separate smooths for space and time, with the `s()` splines, and to avoid the assumption of the interaction of space and time effects:  
+
+```{r gam.4}
+# the fourth GAM
+gam.4 <- gam(priceper~s(X,Y) + s(days), data = hp_data)
+summary(gam.4)
+```
+
+Again there is evidence of spatial and temporal trends in the data and these can be visualised using the `plot.gam` function in `mgcv` (called with just `plot`). 
+```{r smoothplot4, fig.height = 4, fig.width = 7, fig.cap = "A `mgcv` plot of the spatial and temporal smooths."}
+plot(gam.4, page = 1)
+```
+
+Also, the space-time interactions could be generated in the same way as for the `gam.3` model above, using the `X` and `Y` values in `l_grid` and the time slices in `pred_days`. 
+
+### 2.7 Including other predictor variables
+
+Up until now only the the response (target) variable, `priceper` has been examined against time and location in GAM smooth specified in different ways, with the aim of exploring the spatial and temporal variability of the variable, but also to introduce GAM smooths. The code below includes the `pef` predictor variable in a GAM model as a fixed parametric term (i.e. in the same way as in the OLS model created above). 
+```{r gam.5}
+# the fifth GAM
+gam.5 <- gam(priceper~s(X,Y) + s(days) + pef, data = hp_data)
+summary(gam.5)
+```
+
+The model summary indicates that `pef` is a significant predictor of `priceper` and improves the model fit. However, this raises a key question of how should predictor variables be included in in the model: in parametric form or in a smooth? This is addressed in the next section.  
+
+As before the smooths can be plotted:
+```{r eval = F}
+plot(gam.5, page = 1) 
+```
+
+### 2.8 Summary  
+
+This section has introduced GAMs with splines / smooths as a way of investigating any space-time effects present in the data and their characteristics. The mechanics of splines was described and illustrated,  and a brief introduction to different spline forms was provided. Variations in the response variable (`priceper`) in time, space and space-time were explored through elementary model fitting and plotting the smooth graphical trends. In this case, effects in space and time are present in the `priceper` predictor variable and it looks like there is a universal spatial trend at all times and universal temporal trend everywhere. The final GAM model included explanatory variables (`pef` and `beds`) which added some explanatory power but these were not examined with respect to space or time (i.e. in smooths). This is done in the next section. 
+
+Such investigations are an important initial step. They guide subsequent analysis rather than making assumptions about space time interactions and plugging every predictor variable into a space-time smooth of some kind. They provide evidence of space-time variations in the response variable  - i.e. whether the effects in space and time are present in the data - and can help determine which predictor variables may be of further interest.  
+
+## 3. Effects of Time and Space with predictor variables
+
+The previous section examined variability fo the response variable in time, space and space-time (the latter in 2 different ways). In this section these investigations are extended to consider the variation of the response variable (`priceper`) with the `pef` predictor variable, but this time with the Intercept as an addressable term in the model. 
+
+Consider the `gam.5` model created above:
+```{r eval = F}
+gam.5  <- gam(priceper~s(X,Y) + s(days) + pef, data = hp_data)
+summary(gam.5)
+```
+Note that the `gam.5` model includes the terms `s(X,Y) + s(days)`. These model the spatially varying and temporally varying Intercept plus error. Note that if this was a spatial model (without time), then just `s(X,Y)` would be included for the Intercept and similarly just `s(days)` for a purely temporal model.  
+
+It `gam.5` model can be reformulated as follows with an addressable Intercept term: 
+```{r gam.5.new}
+gam.5.new <- gam(priceper ~0 + Intercept + s(X,Y,by=Intercept) + s(days, by=Intercept) + pef,
+                data = hp_data |> mutate(Intercept = 1))
+summary(gam.5)
+```
+
+The model summary now includes `Intercept` as a parametric term (rather than `(Intercept)`) and `s(X,Y):Intercept` and `s(days):Intercept` as smooth terms rather than `s(X,Y) `and `s(days)`, but the values in both summaries are all the same. 
+
+The formula in subsequent models in this vignette include the Intercept as an addressable term. The code below creates this variable in the input data and in order to facilitate mapping of the resulting coefficient estimates, the models in this section are specified with the original coordinates:
+```{r data_prep}
+hp_data <- 
+  hp_data |> 
+  mutate(Intercept = 1)
+```
+
+### 3.1 Time
+
+The code below specifies a GAM regression model with smooths for space and time as in the previous section but now with the `pef` predictor variable, included in parametric form and in a temporal smooth with `days`. This suggests in this case that it is important to model this relationship over time.  
+
+```{r gam.t}
+gam.t <- gam(priceper~0 + Intercept + s(X,Y,by=Intercept) + s(days, by=Intercept) + 
+              pef + s(days, by = pef), 
+            data = hp_data)
+summary(gam.t)
+```
+
+The summary of this model indicates that the relationship of `pef` with `priceper` changes over time and has a strong linear negative trend (the smooth `s(days):pef` is significant as is the `pef`  parametric coefficient). The nature of the temporally varying coefficients can be examined using the `caculate_vcs` function in the `stgam` package. This returns a `tibble` with coefficient estimates ("b_") and standard errors ("se_") for each of terms specified. 
+
+```{r vcs.t}
+vcs <- calculate_vcs(input_data = hp_data, mgcv_model = gam.t, terms = c("Intercept", "pef"))
+head(vcs)
+```
+The temporal variation of the relationship of `pef` with the target variable can be plotted, and in this case the linear trend is confirmed: the negative relationship of `pef` with the target variable does not change over time. 
+
+```{r smoothplot.t, fig.height = 4, fig.width = 7, fig.cap = "A plot of the temporal smooth for `pef`."}
+vcs |> 
+  mutate(u = b_pef + se_pef, 
+         l = b_pef - se_pef) |>
+  ggplot(aes(x = dot, y = b_pef, ymin = l, ymax = u)) + 
+  geom_ribbon(fill = "lightblue") + 
+  geom_line() + 
+  theme_bw() + 
+  xlab("Date") + ylab("pef") 
+```
+
+### 3.2 Space
+
+The spatial variation in the relationship of the predictor variable with the target variable can also be examined. The code below specifies the `pef` predictor variable within a spatial smooth, but again with a spatially and temporally varying intercept. Notice how `pef` is included in both the smooth and as parametric (global) term. 
+```{r gam.s}
+gam.s <- gam(priceper~0 + Intercept + s(X,Y,by=Intercept) + s(days, by=Intercept) + 
+              pef + s(X,Y, by = pef), 
+            data = hp_data)
+summary(gam.s)
+```
+
+Here is is evident at `pef` is  varying significantly over space (see `s(X,Y):pef`) but is not significant as a global fixed term. That is, the coefficient estimate slope as a global slope is not significantly different from zero, but is when varying over space and allowing for Intercept to vary over space and time. This finding could be related to the age of the houses, which were built in clusters in different locations.  
+
+Again the varying coefficients can be extracted from the model for the predictor variable and mapped both at observation locations and over the hexagonal grid if a time period for the Intercept smooth in `gam.s` is specified:
+```{r, smoothplot.s, fig.height = 4, fig.width = 7, fig.cap = "Maps of the spatial smooth for `pef` over the original observations and the hexagonal grid."}
+# 1.over observation locations
+vcs <- calculate_vcs(input_data = hp_data, 
+                     mgcv_model = gam.s, 
+                     terms = c("Intercept", "pef"))
+tit <-expression(paste(""*beta[`pef`]*"")) 
+p1 <- 
+  ggplot() + geom_sf(data = lb, col = "lightgrey") +
+  geom_point(data = vcs, aes(x = X, y = Y, colour = b_pef), alpha = 1) + 
+  scale_colour_continuous_c4a_div("brewer.rd_yl_bu", name = tit) +
+  theme_bw() + 
+  theme(legend.position = "bottom", 
+        legend.key.width = unit(1, "cm"),) + 
+  xlab("") + ylab("")
+# 2. over grid - recall it needs an intercept term and a days value!
+vcs <- calculate_vcs(input_data = l_grid |> mutate(Intercept = 1, days = mean(hp_data$days)), 
+                     mgcv_model = gam.s, 
+                     terms = c("Intercept", "pef"))
+p2 <- 
+  ggplot() + 
+  geom_sf(data = vcs, aes(fill = b_pef), col = NA) + 
+  scale_fill_continuous_c4a_div("brewer.rd_yl_bu", name = tit) +
+  theme_bw()+
+  theme(legend.position = "bottom", 
+        legend.key.width = unit(1, "cm"),) + 
+  xlab("") + ylab("")
+plot_grid(p1, p2)
+```
+
+Here the relationship of `pef`, the Potential energy efficiency rating, varies over space with a distinct inflection from negative values in the centre of the study area to positive ones in outer regions.  
+
+### 3.3 Space-Time I
+
+It is also possible to examine the space-time dependencies between the target variable and the `pef` predictor variable. The code below specifies a GAM with a space-time smooth, with a spatially and temporally varying intercept. As before, a single TP smooth is specified with the dimensions of each basis (a 2D basis for `X` and `Y`; a 1D basis for `days`), as different degrees of smoothness are expected across space and time.
+```{r gam.st1}
+gam.st1 <- gam(priceper~0 + Intercept + s(X,Y,by=Intercept) + s(days, by=Intercept) +  
+                pef + t2(X,Y,days, d= c(2,1), by = pef), 
+              data = hp_data)
+summary(gam.st1)
+```
+
+The `pef` variable is still not significant globally, but it is over space and time (`t2(X,Y,days):pef`).  When the space-time trends are examined (see the figures below), the increasingly negative effect over time is evident and the spatial distributions indicate a general lower relationship with the target variable in the east fo the study area and increasingly negative one to the west.
+
+```{r, smoothplot.st1, warning=F, message=F, fig.height = 5, fig.width = 9, fig.cap = "Summaries of coefficient estimates from the the space-time smooths for `pef`."}
+# calculate the varying coefficient estimates
+vcs <- calculate_vcs(input_data = hp_data, mgcv_model = gam.st1, terms = c("Intercept", "pef"))
+# temporal trends
+p_time <- 
+  vcs |> 
+  select(dot, b_Intercept, b_pef) |> 
+  pivot_longer(-dot) |>
+  mutate(name = recode(name, 
+                       "b_Intercept" = '""*beta[Intercept]',
+                       "b_pef" = '""*beta[pef]')) |>
+  ggplot(aes(x = dot, y = value)) +
+  geom_point(alpha = 0.1) + 
+  geom_smooth() + 
+  facet_wrap(~name,  labeller = label_parsed, scale = "free", ncol = 1) +
+  theme_bw() + xlab("Year") + ylab("") 
+# spatial trends
+tit <-expression(paste(""*beta[`Intercept`]*"")) 
+p_sp1 <- 
+  ggplot() + geom_sf(data = lb, col = "lightgrey") +
+  geom_point(data = vcs, aes(x = X, y = Y, colour = b_Intercept), alpha = 1) + 
+  scale_colour_continuous_c4a_seq("brewer.yl_gn_bu", name = tit) +
+  theme_bw() + 
+  xlab("") + ylab("")
+tit <-expression(paste(""*beta[`pef`]*"")) 
+p_sp2 <- 
+  ggplot() + geom_sf(data = lb, col = "lightgrey") +
+  geom_point(data = vcs, aes(x = X, y = Y, colour = b_pef), alpha = 1) + 
+  scale_colour_continuous_c4a_div("brewer.rd_yl_bu", name = tit) +
+  theme_bw() + 
+  xlab("") + ylab("")
+
+plot_grid(p_time, plot_grid(p_sp1, p_sp2, ncol = 1), nrow = 1, rel_widths = c(3.5,6))
+```
+
+Of course it is also possible to plot time slices of the spatial distribution of the relationship of `pef` with `priceper` over grids as was done before. Notice in the code below how the terms for the Intercept and `pef` are extracted fro each time period in the looped call to `calculate_vcs`. This east-west trend and its changes over time are confirmed.
+
+```{r, smoothplot.st1.2, fig.height = 6, fig.width = 7, fig.cap = "The changes over time of the spatial distrubtuion of the `pef` coefficient estimate."}
+# 1. create time intervals (as above)
+pred_days = seq(0, 2190, 365)/100
+# 2. create coefficient estimates for each time period (n = 7) 
+res_out <- matrix(nrow = nrow(l_grid), ncol = 0)
+for (i in pred_days){
+  res.i <- calculate_vcs(input_data = l_grid |> mutate(days = i),
+                         mgcv_model = gam.st1,
+                         terms = c("Intercept", "pef"))
+  # select just the coefficient estimates of interest
+  res.i <- res.i |> st_drop_geometry() |> select(starts_with("b_pef")) 
+  res_out <- cbind(res_out, res.i)
+}
+
+# 3. name with years and join to the grid
+colnames(res_out) <- paste0("PEF", "_", 2018:2024)
+l_grid |> cbind(res_out) |>
+  # select the variables and pivot longer
+  select(starts_with("PEF")) |> 
+  pivot_longer(-geometry) |>
+  # make the new days object a factor (to enforce plotting order)
+  mutate(name = factor(name, levels = colnames(res_out))) |>
+  
+   # 4. and plot 
+  ggplot() + 
+  geom_sf(aes(fill = value), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_div(name = "Potential Energy\nEfficiency") +
+  # facet
+  facet_wrap(~name, ncol = 3) +
+  # apply and modify plot theme
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.direction = "horizontal",
+    legend.position.inside = c(0.7, 0.15), 
+	  legend.text=element_text(size=10),
+	  legend.title=element_text(size=12),
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+	  legend.key.width = unit(1.5, "cm"),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank())  
+```
+
+### 3.4 Space-Time II
+
+The previous section created a GAM model with a single space-time smooth for the `pef` predictor variable. It is also possible to include them as separate smooths, as was done to investigate the variability of the target variable. The code snippet below does this again with a spatially and temporally varying intercept.
+
+```{r gam.st2} 
+gam.st2 <- gam(priceper~0 + Intercept + s(X,Y,by=Intercept) + s(days, by=Intercept) 
+              + pef + s(X,Y, by = pef) + s(days, by = pef), data = hp_data)
+summary(gam.st2)
+```
+
+Here the fixed global term is again not significant, and interestingly neither is separate temporal smooth. The plots fo the smooths confirm this. Together this confirms what was found in the step above in the previous subsection with a combined TP smooth and indicates that there  is a spatial trend in the relationship of `pef` with `priceper` that changes in intensity over time but not in its spatial distribution. This suggests a super-imposition of spatial and temporal trends: the temporal smooths with `days` is not significant.  
+
+```{r smoothplot.st2, fig.height = 8, fig.width = 7, fig.cap = "`mgcv` plots of the seperate space and time smooths for the `pef` predictor variable."}
+plot(gam.st2, pages = 1)
+```
+
+### 3.5 Summary 
+
+This section has applied smooths to a single predictor variable. These have explored time, space and space-time, by constructing smooths parameterised with time and location. These allow changes in the relationship between the predictor variable and the target variable to be examined over space and time. Importantly, a space-time GAM was constructed in 2 different: by including space and time in a singe smooth and then using separate space smooths and time smooths. These reflect different assumptions about the nature of the space-time dependencies in the data and result in different inferences (understanding) about the process if the significant components of the model are considered. This may not be important if the objective of constructing the GAM-based varying coefficient models is prediction, but is if the objective is process understanding, as is commonly the case in geographical analyses of space-time data. 
+
+
+There 2 important implications of this: 
+
+1. It suggests the need to to examine model form and to determine how space and time should be best be used to parameterise GAM smooths. This is done in the next section using an automated approach to model selection. 
+1. This would provide a route to avoid super-imposing space-time trends by simply constructing a single smooth combining space time. In the example above, the spatial effect was clear but was proportionately the same over time, i.e.  where the (partial derivative), $\delta f / (\delta Space, \delta Time) = 0$. 
+
+
+## 4. Working with `stgam`: model selection
+
+
+The models in construction in Section 3 used a variety of smooths. The Intercept was modelled a parametric term with separate space and time smooths, and the `pef` predictor variable was included in parametric form, in parametric form with a single space-time smooth and in parametric form with separate space time smooths. This poses the question of which form to use and how to specify the model? Which is best? A key focus of the `stgam` package is to seek to answer this question. It does this by creating and evaluating multiple models. 
+
+### 4.1 Using GCV to evaluate GAMs with smooths
+
+One way to evaluate models is to compare them using some metric. Commonly AIC [@akaike1998information] corrected AIC (AICc) [@hurvich1989regression] or BIC [@schwarz1978estimating] are used to compare models as they provide a parsimonious measures model fit (balancing model complexity and prediction accuracy). However, there are some uncertainties over using these to compare `mgcv` GAM smooth models due to variations in the effective degrees of freedom (EDF) introduced by the smooths. The result that model EDFs vary depending on how the smoothing parameters are selected, potentially leading to over-penalization or under-penalization in BIC calculations. As a result model Generalized Cross-Validation (GCV) score is recommended for evaluating and comparing `mgcv` GAMs [@wood2017generalized; @marra2011practical]. GCV provides an un-biased risk estimator (UBRE) estimate of model fit. It is similar to BIC as it is able to balance model fit with complexity, but does not suffer from some of problems of using BIC when applied to GAMs (e.g. bias in non-parametric model comparison, over-penalises complex smooths etc). The best model is one that **minimises** the GCV score. 
+
+The code below extracts the GCV from each of the models in the last section and prints them out in order. Here it can be seen that the GAM model with `pef` specified in separate space-time smooths generated the best model.  
+
+```{r}
+df <- data.frame(Model = c("Time", "Space", "Space-Time I", "Space-Time II"),
+                 GCV = c(gam.t$gcv.ubre, gam.s$gcv.ubre, gam.st1$gcv.ubre, gam.st2$gcv.ubre))
+# rank the models 
+df |> arrange(GCV)
+```
+
+
+### 4.2 Model selection: determining model form 
+
+In a space-time model there are 6 options for each predictor variable: 
+
+i. It is omitted.
+ii. It is included as a parametric response with no smooth.
+iii. It is included in parametric form and in a spatial smooth with location.
+iv. It is included in parametric form and in a temporal smooth with time.
+v. It is included in parametric form and in a single space-time smooth.
+vi. It is included in parametric form and in 2 separate space and time smooths.
+
+The intercept can be treated similarly, but without it being absent (i.e. 5 options). Obviously there are 3 options for spatial models (i., ii. and iii.) and for temporal models (i., ii. and iv.), with each having 2 options for the intercept. Thus for a purely spatial or purely a temporal regression with $k$ predictor variables there are $2 \times 3^k$ potential models and for a space-time regression there are $5 \times 6^k$ potential models to evaluate. 
+
+Recall that the `hp_data` contains a number of numeric variables that could be of use in explaining the space-time variations in the `priceper` target variable: 
+
+```{r}
+head(hp_data)
+```
+
+These include `cef` (Current energy efficiency rating) `pef` (Potential energy efficiency rating) and `beds` (Number of bedrooms), as well as location (`X` and `Y`) and time (`days`). Thus with $k = 3$ variables could are 1080 potential models to evaluate in space-time case study and 54 potential models in a spatial case study. Here 2 of the variables are used to illustrate an evaluation of 180 space-time models, `pef` as before and `beds`. 
+
+The `evaluate_models()` function in the `stgam` package constructs and compares the full set of potential models. It uses the GCV value of each model to evaluate and rank them. Note that in the code below, `ncores` is set to 2 pass CRAN diagnostic checks - you may want to specify more using `detectCores()-1` from the `parallel` package. Remember that the input data needs to have a defined Intercept term which can be created in the following way `input_data |> mutate(Intercept = 1))` (this was done at the start of Section 3 for `hp_data`).
+
+
+
+```{r eval_stvc, eval = T, cache = T, warning=F, message=F}
+library(doParallel)
+t1 <- Sys.time()
+stvc_mods <- evaluate_models(
+  input_data = hp_data,
+  target_var = "priceper",
+  vars = c("pef", "beds"),
+  coords_x = "X",
+  coords_y = "Y",
+  VC_type = "STVC",
+  time_var = "days",
+  ncores = 2)
+Sys.time() - t1  # about 14 minutes (6 minutes with 15 cores!)
+```
+
+
+The best 10  models can be extracted (i.e. those with the lowest GCV score) using the `gam_model_rank()` function in the `stgam` package introduced in Section 3. Interestingly the top 5 ranked models all have space and time specified for each predictor variable, but in different combinations of single and separate space-time smooths.  The top 4 models all have the `beds` predictor variable specified in separate space time smooths, suggesting that while there are space and time dependences with the target variable, there are not space-time ones.   
+
+```{r}
+mod_comp <- gam_model_rank(stvc_mods)
+# have a look
+mod_comp |> select(-f) 
+```
+
+### 4.3 The final model 
+
+A final model for use in analysis can be specified in the form of the top ranked model above. This included the Intercept in a single space-time TP smooth and in separate space and time smooths for `pef` and `beds`. 
+
+First the formula is extracted and can be inspected:
+
+```{r}
+f <- as.formula(mod_comp$f[1])
+f
+```
+
+Then this is put into a `mgcv` GAM model, and checked for over-fitting using the `k.check` function in the`mgcv` package. It underpins the `gam.check` function but does not display the diagnostic plots. Here the `k-index` values are near to 1, the `k'` and  `edf` parameters are not close, and importantly the `edf` values are all much less than the `k'` values, so this model is reasonably well tuned. **NB** if the `k'` and  `edf` parameters are close for some smooths, then you may want to increase the `k` parameter in the relevant smooth. These are automatically determined by the `mgcv` package but can be specified manually - see the `mgcv` help for `k.check` and `choose.k`. 
+
+```{r cache = T}
+gam.m <- gam(f, data = hp_data, method = "REML")
+k.check(gam.m)
+```
+
+A summary of the model can be examined and this shows that nearly all of the terms are significant except the temporal smooth for `beds`. 
+
+```{r}
+summary(gam.m)
+```
+
+### 4.4 Varying coefficient estimates 
+
+The spatially and temporally varying coefficients estimates generated by the model can be extracted in a number of different ways using the `calulate_vcs` function in the  `stgam` package, as indicated in earlier sections. There are basically 2 options for generating the varying coefficient estimates: i) over the original data points or ii) over spatial surfaces for specific time slices. 
+
+For the first option the original data, the GAM model and a vector of the model terms (i.e. predictor variables names) are simply passed to the `calculate_vcs` function. The second option requires slices of the space-time data to be passed to the `calulate_vcs` function and a deeper consideration of how the results are processed and combined. In both cases the results can be summarised, mapped.
+
+Considering first the data of the original observations:
+
+```{r}
+vcs <- calculate_vcs(input_data = hp_data, 
+                    mgcv_model = gam.m, 
+                    terms = c("Intercept", "pef", "beds"))
+```
+
+A summary over space and time of the coefficient estimates shows that the intercept the is large and positive and that `pef` and `beds` are generally negative but with some positive values at in some places or at some times.   
+```{r}
+vcs |> select(starts_with("b_")) |>
+  apply(2, summary) |> round(1)
+```
+
+These can be examined over time: 
+
+```{r, final_time, fig.height = 3, fig.width = 8, fig.cap = "The changes over time of the coefficient estimates of the final model."}
+vcs |> select(dot, starts_with("b_")) |> 
+  rename(`Intercept` = b_Intercept,
+         `Potential Energy Efficiency` = b_pef,
+         `Bedrooms` = b_beds) |>
+  pivot_longer(-dot) |>
+  mutate(name = factor(name, levels=c("Intercept","Potential Energy Efficiency", "Bedrooms"))) |>
+  group_by(dot, name) |>
+  summarise(
+    lower = quantile(value, 0.25),
+    median = median(value),
+    upper = quantile(value, 0.75)
+  ) |>
+  ggplot(aes(x = dot, y = median)) +
+  geom_point(col = "blue", alpha = 0.2) +
+  geom_smooth() +
+  facet_wrap(~name, scale = "free_y") +
+  theme_bw() + xlab("") + ylab("") +
+  theme(strip.background = element_rect(fill="white"))
+
+```
+
+Standard `dplyr` and `ggplot` approaches can be used to join and map the coefficient estimates as in the figure below, which summarises the coefficient estimates for `pef` (`b_pef`) by year. 
+
+```{r svccoefs, fig.height = 6, fig.width = 7, fig.cap = "The varying `pef` (Potential Energy Efficiency) coefficient estimates over space and time."}
+# make spatial data  
+vcs_sf <- vcs |> st_as_sf(coords = c("X", "Y"), remove = F) 
+# plot 
+ggplot()  + 
+  geom_sf(data = lb) +
+  geom_sf(data = vcs_sf, aes(col = b_pef)) + 
+  scale_colour_continuous_c4a_div(palette="brewer.rd_bu", 
+                                name = "Potential\nEnergy Efficiency") + 
+  facet_wrap(~yot) + 
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.direction = "horizontal",
+    legend.position.inside = c(0.7, 0.15), 
+	  legend.text=element_text(size=10),
+	  legend.title=element_text(size=12),
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+	  legend.key.width = unit(1.5, "cm"),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank())  
+```
+
+Finally the `l_grid` can be used summarise the coefficient estimates over space and time as well, here summarising each year, approximately described in the `pred_days` object defined above. Notice how the `for` loop below combines all the coefficient estimates this time.  
+
+
+The maps reflect the relatively small changes in the relationship with `priceper` over time plotted above.   
+```{r svccoefs2, cache = T,  fig.height = 6, fig.width = 7, fig.cap = "The varying `beds` (Bedrooms) coefficient estimates over time and the grid surface."}
+# create time slices
+years  <- 2018:2024
+# calculate  over the grid for each time slice
+res_out <- matrix(nrow = nrow(l_grid), ncol = 0)
+for (i in 1:length(years)){
+  # convert years to days
+  day.val = (years[i]-2018) * 365 / 100
+  res.i <- calculate_vcs(input_data = l_grid |> mutate(days = day.val),
+                         mgcv_model = gam.m,
+                         terms = c("Intercept", "pef", "beds"))
+  # select all the coefficient estimates 
+  res.i <- 
+    res.i |> 
+    st_drop_geometry() |> 
+    select(starts_with("b_"), 
+           starts_with("se_")) 
+  # rename them
+  names(res.i) <- paste0(names(res.i), "_", years[i])
+  # bind to the result
+  res_out <- cbind(res_out, res.i)
+  cat(years[i], "\t")
+}
+# join to the grid
+l_grid |> cbind(res_out) |>
+  # select the variables and pivot longer
+  select(starts_with("b_beds")) |> 
+  pivot_longer(-geometry) |>
+  # make the new days object a factor (to enforce plotting order)
+  mutate(name = factor(name, levels = paste0("b_beds_", 2018:2024))) |>
+
+   # 4. and plot 
+  ggplot() + 
+  geom_sf(aes(fill = value), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_div("brewer.spectral", name = "Bedrooms") +
+  # facet
+  facet_wrap(~name, ncol = 3) +
+  # apply and modify plot theme
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.direction = "horizontal",
+    legend.position.inside = c(0.7, 0.15), 
+	  legend.text=element_text(size=10),
+	  legend.title=element_text(size=12),
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+	  legend.key.width = unit(1.5, "cm"),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank())  
+```
+
+
+### 4.5 Summary
+
+This section has illustrated the the use of functions in the the `stgam` package. It suggests the following workflow:
+
+1.  Prepare the data: lengthen the `data.frame`, `tibble` or `sf` object containing the data to have a single location and time variables (here these were `X`,`Y`and `T`).
+2.  Evaluate all possible models: for spatial or temporal problems each predictor is specified in 3 ways, for space-time problems each predictor is specified in 6 ways.
+3.  Pick the best model: the one with the lowest GCV score.
+4.  Extract the formula and create the final model.
+5.  Calculate the varying coefficient estimates: these quantify how the relationships between the target and predictor variables vary over space, time or space-time.
+6.  Create maps, time series plots etc
+
+This evaluates and ranks multiple models using model GCV value. This was done algorithmically using the `evaluate_models` function. However, this was not undertaken in isolation. Rather it built on the investigations in Section 3 to determine whether space and time effects were present in the data.  This set of model investigations were gone through to both develop and confirm knowledge of processes related to house prices in London: that is the analysis was both considered and contextual. For example, in Section 3 it was determined that a varying intercept term was appropriate and with a different dataset there may be a need to explore different avenues. 
+
+Similarly more of the model space could have been examined, for example to include `cef` in the models. The `stgam` package allows these choices to be validated through an automated approach, providing an exploration of the full set of potential choices. The the GCV as an unbiased risk estimator was useful helping to evaluate models 
+ 
+
+
+## 5. Notes, resources and summaries
+
+### 5.1 Use REML in the GAMs – Harry
+
+All of the space time GAM models in this vignette have been specified  with `method = "REML"`. Model estimation in GAMs can be conducted in two ways: (a) predictive (i.e., out-of-sample minimization) via Generalized Cross-Validation (GCV) and (b) Bayesian (i.e. attach priors on basis coefficients) via restricted maximum likelihood (REML). REML tends to provide more stable estimates of the smoothing parameters (i.e., reduce over-fitting) and tends to provide more robust estimates of the variance. GCV is more computationally efficient but can over-fit, especially when errors are correlated. GCV is set as the default in `mgcv`.
+
+### 5.2 Number of knots in space and time
+
+In Section 4.3, the GAM model was checked for under- and over-fitting using the `k.check` function in the`mgcv` package the advice was to increase `k` in the smooths if the `k'` and  `edf` parameters were close. This can be done by specifying it manually in the smooth as in the hypothetical example below.
+
+```{r eval = F}
+gam_m <- gam(y~s(X,Y, by = x, k = 40), data = input_data)
+```
+
+The number of knots in the smooth ($k$) determines the complexity of the response-to-predictor variable smooths in the GAM. However, determining `k` is a balance between setting it too large which can result in over-fitting and under-fitting if it is too low. Computational issues (speed and model stability) can arise if `k` is set to be too large, especially in the space-time case for small datasets.
+
+### 5.3 Resources
+
+We think these talks by Noam Ross provide really useful tips and pointers for working with GAMs and `mgcv`: 
+
+- https://www.youtube.com/watch?v=q4_t8jXcQgc
+- https://www.youtube.com/watch?v=sgw4cu8hrZM
+
+
+### 5.4 Summary
+
+The rationale for using GAMs with TP smooths and GP bases for spatially varying coefficient (SVC) or temporally varying coefficient (TVC) models is as follows: 
+
+- GAMs with smooths (splines) capture non-linear relationships between the response variable and covariates.
+- Smooths generate a varying coefficient model when they are parameterised with more than one variable. 
+- This is readily extending to the temporal and / or spatial dimensions to generate SVCs and STVCs.
+- Different smooths are available, but i) Tensor Products smooths can be used combine space and time (because of the specification of individual length scale parameters for $\rho_{space}$ and $\rho_{time}$ in the smooth), and ii) specifying TP smooths with GP bases reflects Tobler's First Law of Geography (spatial autocorrelation and decay).
+- This can be extended to the temporal case on the assumption of temporal decay (similarity decreases over time).
+- The optimised $\rho_{space}$ and $\rho_{time}$ values provide an explicit measure of the *scales* of interaction between each target variable and the predictor variable (i.e. a multi-scale space-time analysis).
+- GAMs are robust, have a rich theoretical background and been subject to much development.
+
+The workflow suggested in this vignette and in the `stgam` package is to first optimise the length scale parameters. This provides a direct indication of the scales of the individual target-to-predictor variable space-time (i.e. multiscale) interactions through the $\rho_{space}$ and $\rho_{time}$ parameters. Second, to then determine the most appropriate model form (both steps evaluated by minimising a Generalized Cross-Validation (GCV), an un-biased risk estimator the model recommended for evaluating `mgcv` GAMs [@wood2017generalized]). This avoids making potentially unreasonable assumptions about how space and time interact in spatially and temporally varying coefficient (STVC) models. 
+
+Future developments will seek to examine the scales of spatial dependencies in the data sing kriging based approaches and will extend the `stgam` package to work with large data (i.e. to draw from the functionality of the `gamm` function in `mgcv`).
+
+
+## References
+
+
+

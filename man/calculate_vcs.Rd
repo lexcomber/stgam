@@ -36,7 +36,7 @@ svc_mods <-
     vars = c("pef", "beds"),
     coords_x = "X",
     coords_y = "Y",
-    STVC = FALSE,
+    VC_type = "SVC",
     time_var = NULL,
     ncores = 2
   )
@@ -50,6 +50,6 @@ gam.m = gam(f, data = input_data)
 # calculate the Varying Coefficients
 terms = c("Intercept", "pef")
 vcs = calculate_vcs(input_data, gam.m, terms)
-vcs |> select(priceper, yot, X, Y, starts_with(c("b_", "se_")), yhat)
+vcs |> select(priceper, X, Y, starts_with(c("b_", "se_")), yhat)
 
 }

@@ -5,7 +5,7 @@
 #' @param vars a vector of the predictor variable names (without the Intercept).
 #' @param coords_x the name of the X, Easting or Longitude variable in `input_data`.
 #' @param coords_y the name of the Y, Northing or Latitude variable in `input_data`.
-#' @param STVC a logical operator indicating whether the model is space-time (`TRUE`) or just space (`FALSE`) which is the default.
+#' @param VC_type the type of varying coefficient model: options are "TVC" for temporally varying, "SVC" for spatially varying  and "STVC" for space-time .
 #' @param time_var the name of the time variable if undertaking STVC model evaluations.
 #' @param ncores the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.
 #'
@@ -18,6 +18,7 @@
 #' @importFrom doParallel registerDoParallel
 #' @importFrom foreach foreach
 #' @importFrom parallel stopCluster
+#' @importFrom stats formula
 #' @export
 #'
 #' @examples
@@ -37,7 +38,7 @@
 #'     vars = c("pef"),
 #'     coords_x = "X",
 #'     coords_y = "Y",
-#'     STVC = FALSE,
+#'     VC_type = "SVC",
 #'     time_var = NULL,
 #'     ncores = 2
 #'   )
@@ -48,7 +49,7 @@ evaluate_models <- function(
     vars,
     coords_x,
     coords_y,
-    STVC = FALSE,
+    VC_type = "SVC",
     time_var = NULL,
     ncores = 2)
 {
@@ -69,6 +70,16 @@ evaluate_models <- function(
       glue("+s({time_var},by={varname})"),
       glue("+s({coords_x},{coords_y},by={varname}) + s({time_var},by={varname})"),
       glue("+t2({coords_x},{coords_y},{time_var},d=c(2,1),by={varname})"))[index]
+  }
+
+  # function to make TVC index grid
+  make_tvc_index_grid <- function(vars) {
+    expression_x <- "expand.grid(Intercept = 1:2"
+    for (i in vars) {
+      expression_x <- paste0(expression_x, ",", i, " = c(1,2,4)")
+    }
+    expression_x <- paste0(expression_x, ")")
+    eval(parse(text = expression_x))
   }
 
   # function to make SVC index grid
@@ -115,9 +126,13 @@ evaluate_models <- function(
   }
 
   # 1. make the terms grid
-  if (!STVC) {
+  if (VC_type == "SVC") {
     terms_grid <- make_svc_index_grid(vars)
-  } else {
+  }
+  if (VC_type == "TVC") {
+    terms_grid <- make_tvc_index_grid(vars)
+  }
+  if (VC_type == "STVC") {
     terms_grid <- make_stvc_index_grid(vars)
   }
 
