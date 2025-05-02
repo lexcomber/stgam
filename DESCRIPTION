@@ -10,7 +10,7 @@ Author: Lex Comber [aut, cre],
   Paul Harris [ctb],
   Chris Brunsdon [ctb]
 Maintainer: Lex Comber <a.comber@leeds.ac.uk>
-Description: This package provides a framework for specifying spatially, temporally and spatially-and-temporally varying coefficient models using Generalized Additive Models (GAMs) with smooths. It builds on GAM functionality from the `mgcv` package. The smooths are parameterised with location, time and predictor variables. The framework supports the investigation of the presence and nature of any space-time dependencies in the data by evaluating multiple model forms (specifications) using a Generalized Cross-Validation (GCV) score. The workflow sequence is to i) prepare the data (`data.frame`, `tibble` or `sf` object) by lengthening it to have a single location and time variables for each observation. ii) evaluate all possible spatial and/or temporal models in which each predictor is specified in different ways. iii) to evaluate the models via their GCV score and to pick the best model (the one with the lowest GCV). iv) create the final model. v) calculate the varying coefficient estimates to quantify how the relationships between the target and predictor variables vary over space, time or space-time. vi) create maps, time series plots etc. For more details see: Comber et al (2023) <https://doi.org/10.4230/LIPIcs.GIScience.2023.22>, Comber et al (2024) <https://doi.org/10.1080/13658816.2023.2270285>  and Comber et al (2004) <https://doi.org/10.3390/ijgi13120459>.
+Description: This package provides a framework for specifying spatially, temporally and spatially-and-temporally varying coefficient models using Generalized Additive Models with smooths. The smooths are parameterised with location, time and predictor variables. The framework supports the investigation of the presence and nature of any space-time dependencies in the data by evaluating multiple model forms (specifications) using a Generalized Cross-Validation score. The workflow sequence is to: i) Prepare the data by lengthening it to have a single location and time variables for each observation. ii) Evaluate all possible spatial and/or temporal models in which each predictor is specified in different ways. iii) Evaluate each model and pick the best one. iv) Create the final model. v) Calculate the varying coefficient estimates to quantify how the relationships between the target and predictor variables vary over space, time or space-time. vi) Create maps, time series plots etc. For more details see: Comber et al (2023) <https://doi.org/10.4230/LIPIcs.GIScience.2023.22>, Comber et al (2024) <https://doi.org/10.1080/13658816.2023.2270285>  and Comber et al (2004) <https://doi.org/10.3390/ijgi13120459>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -29,13 +29,15 @@ Config/testthat/edition: 3
 URL: https://github.com/lexcomber/stgam
 BugReports: https://github.com/lexcomber/stgam/issues
 Depends: 
-    R (>= 3.5.0),
+    R (>= 4.1.0),
     mgcv (>= 1.9-1),
     glue
 LazyData: true
 Imports:
     foreach,
+    doParallel,
     parallel,
     dplyr,
+    tibble,
     doParallel
 VignetteBuilder: knitr

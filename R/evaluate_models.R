@@ -151,7 +151,7 @@ evaluate_models <- function(
               .combine = 'rbind',
               .packages = c("glue", "mgcv", "purrr", "dplyr")) %dopar% {
                 evaluate_gam(i, terms_grid,  input_data,
-                             target_var, covariates, coords_x, coords_y, time_var)
+                             target_var, vars, coords_x, coords_y, time_var)
               }
     stopCluster(cl)
   }

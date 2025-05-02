@@ -17,27 +17,11 @@
 #'   hp_data |>
 #'   # create Intercept as an addressable term
 #'   mutate(Intercept = 1)
-#' # evaluate different model forms
-#' svc_mods <-
-#'   evaluate_models(
-#'     input_data = input_data,
-#'     target_var = "priceper",
-#'     vars = c("pef", "beds"),
-#'     coords_x = "X",
-#'     coords_y = "Y",
-#'     VC_type = "SVC",
-#'     time_var = NULL,
-#'     ncores = 2
-#'   )
-#' mod_comp <- gam_model_rank(svc_mods)
-#' # have a look
-#' mod_comp |> select(-f)
-#' # select best model
-#' f = as.formula(mod_comp$f[1])
-#' # put into a `mgcv` GAM model
-#' gam.m = gam(f, data = input_data)
+#' # create a model for example as result of running `evaluate_models`
+#' gam.m = gam(priceper ~ Intercept - 1 + s(X, Y, by = Intercept) +
+#'  s(X, Y, by = pef) + s(X, Y, by = beds), data = input_data)
 #' # calculate the Varying Coefficients
-#' terms = c("Intercept", "pef")
+#' terms = c("Intercept", "pef", "beds")
 #' vcs = calculate_vcs(input_data, gam.m, terms)
 #' vcs |> select(priceper, X, Y, starts_with(c("b_", "se_")), yhat)
 #'

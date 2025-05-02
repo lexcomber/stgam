@@ -10,6 +10,8 @@
 #' @importFrom dplyr arrange
 #' @importFrom dplyr slice_head
 #' @importFrom dplyr across
+#' @importFrom tibble tibble
+#'
 #' @export
 #'
 #' @examples
@@ -26,7 +28,7 @@
 #'   evaluate_models(
 #'     input_data = input_data,
 #'     target_var = "priceper",
-#'     vars = c("pef", "beds"),
+#'     vars = c("pef"),
 #'     coords_x = "X",
 #'     coords_y = "Y",
 #'     VC_type = "SVC",
