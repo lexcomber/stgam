@@ -105,7 +105,7 @@ The `stgam` package [@stgam] provides a wrapper around `mgcv` functionality [@mg
 
 This vignette illustrates a workflow for analyses to quantify and model variations over space and time based on GAM smooths. The case study examines house price  (actually price per unit area) for terraced houses in London 2018 to 2024. The workflow suggests a process of moving through the data to X, Y, Z
 
-You should load the `stgam` package and the data. The data are sample of terraced house sales data for 2018 to 2024 extracted from https://data.london.gov.uk/dataset/house-price-per-square-metre-in-england-and-wales, and located via the ONS lookup tables that allows UK postcodes to be linked to location (actually the geometric centroids of the postcode area).
+You should load the `stgam` package and the data. The data are sample of terraced house sales data for 2018 to 2024 extracted from @bin2024, and located via the ONS lookup tables that allows UK postcodes to be linked to location (actually the geometric centroids of the postcode area).
 
 ```{r loadpackages, warning = F, message = F, results=F}
 library(cols4all)
