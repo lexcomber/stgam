@@ -743,8 +743,6 @@ These include `cef` (Current energy efficiency rating) `pef` (Potential energy e
 
 The `evaluate_models()` function in the `stgam` package constructs and compares the full set of potential models. It uses the GCV value of each model to evaluate and rank them. Note that in the code below, `ncores` is set to 2 pass CRAN diagnostic checks - you may want to specify more using `detectCores()-1` from the `parallel` package. Remember that the input data needs to have a defined Intercept term which can be created in the following way `input_data |> mutate(Intercept = 1))` (this was done at the start of Section 3 for `hp_data`).
 
-
-
 ```{r eval_stvc, eval = T, cache = T, warning=F, message=F}
 library(doParallel)
 t1 <- Sys.time()
@@ -927,11 +925,11 @@ l_grid |> cbind(res_out) |>
 
 This section has illustrated the the use of functions in the the `stgam` package. It suggests the following workflow:
 
-1.  Prepare the data: lengthen the `data.frame`, `tibble` or `sf` object containing the data to have a single location and time variables (here these were `X`,`Y`and `T`).
-2.  Evaluate all possible models: for spatial or temporal problems each predictor is specified in 3 ways, for space-time problems each predictor is specified in 6 ways.
-3.  Pick the best model: the one with the lowest GCV score.
+1.  Prepare the data: lengthen the `data.frame`, `tibble` or `sf` object containing the data to have single location and time variables for each observation (in the above examples  these were `X`,`Y`and `days`), and an Intercept as an addressable term.
+2.  Evaluate all possible models. For spatial or temporal problems each predictor is specified in 3 ways, for space-time problems each predictor is specified in 6 ways.
+3.  Rank the models by their GCV score, identfy any consistent model specification trends in the top ranked models and select the best model with the lowest GCV score.
 4.  Extract the formula and create the final model.
-5.  Calculate the varying coefficient estimates: these quantify how the relationships between the target and predictor variables vary over space, time or space-time.
+5.  Calculate the varying coefficient estimates: to quantify how the relationships between the target and predictor variables vary over space, time or space-time.
 6.  Create maps, time series plots etc
 
 This evaluates and ranks multiple models using model GCV value. This was done algorithmically using the `evaluate_models` function. However, this was not undertaken in isolation. Rather it built on the investigations in Section 3 to determine whether space and time effects were present in the data.  This set of model investigations were gone through to both develop and confirm knowledge of processes related to house prices in London: that is the analysis was both considered and contextual. For example, in Section 3 it was determined that a varying intercept term was appropriate and with a different dataset there may be a need to explore different avenues. 

@@ -42,7 +42,7 @@ gam_model_rank <- function(res_tab, n = 10) {
   gcv <- NULL
   nm <- names(res_tab)
   len <- length(nm)
-  res_tab |> rename(GCV = gcv) |> arrange(GCV)
+  res_tab <- res_tab |> rename(GCV = gcv) |> arrange(GCV)
   int_terms <- function(x) c("Fixed", "s_S", "s_T", "s_T + s_S", "t2_ST")[x]
   var_terms <- function(x) c("---", "Fixed", "s_S", "s_T", "s_T + s_S", "t2_ST")[x]
   out_tab <-
