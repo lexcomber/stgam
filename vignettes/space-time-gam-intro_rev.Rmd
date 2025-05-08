@@ -103,7 +103,7 @@ usethis::use_data(hp_data, overwrite = TRUE)
 
 The `stgam` package [@stgam] provides a wrapper around `mgcv` functionality [@mgcv] to support space-time analysis, with a focus on both prediction but also importantly on inference (or process understanding). The latter is commonly the objective of geographical analysis, which are often concerned with how processes and statistical relationships vary over space and / or time. 
 
-This vignette illustrates a workflow for analyses to quantify and model variations over space and time based on GAM smooths. The case study examines house price  (actually price per unit area) for terraced houses in London 2018 to 2024. The workflow suggests a process of moving through the data to X, Y, Z
+This vignette illustrates a workflow for analyses to quantify and model variations over space and time based on GAM smooths. The case study examines house price  (actually price per unit area) for terraced houses in London 2018 to 2024 and highlights the importance of investigating the data for spatial and / or temporal variability before constructing space-time GAMs and undertaking the `stgam` workflow. 
 
 You should load the `stgam` package and the data. The data are sample of terraced house sales data for 2018 to 2024 extracted from @bin2024, and located via the ONS lookup tables that allows UK postcodes to be linked to location (actually the geometric centroids of the postcode area).
 
