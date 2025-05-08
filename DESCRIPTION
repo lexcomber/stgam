@@ -37,7 +37,5 @@ Imports:
     foreach,
     doParallel,
     parallel,
-    dplyr,
-    tibble,
-    doParallel
+    dplyr
 VignetteBuilder: knitr
