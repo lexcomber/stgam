@@ -1,8 +1,8 @@
 #' Extracts varying coefficient estimates (for SVC, TVC and STVC models).
 #'
-#' @param input_data the data used to create the GAM model in `data.frame`, `tibble` or `sf` format
+#' @param input_data the data used to create the GAM model in `data.frame`, `tibble` or `sf` format. This can be the original data used to create the model or another surface with location and time attributes.
 #' @param mgcv_model a GAM model with smooths created using the `mgcv` package
-#' @param terms a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in `data` )
+#' @param terms a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in the `input_data` used to construct the model).
 #'
 #' @return A `data.frame` of the input data and the coefficient and standard error estimates for each covariate. It can be used to generate coefficient estimates for specific time slices and over grided surfaces as described in the package vignette.
 #' @importFrom dplyr mutate

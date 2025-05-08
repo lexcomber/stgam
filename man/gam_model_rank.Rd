@@ -2,7 +2,7 @@
 % Please edit documentation in R/gam_model_rank.R
 \name{gam_model_rank}
 \alias{gam_model_rank}
-\title{Title Ranks models by GCV, giving the model form for each predictor variable.}
+\title{Ranks models by GCV, giving the model form for each predictor variable.}
 \usage{
 gam_model_rank(res_tab, n = 10)
 }
@@ -15,7 +15,7 @@ gam_model_rank(res_tab, n = 10)
 a \code{tibble} of the 'n' best models, ranked by GCV, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's_S' a spatial smooth, 's_T'  a temporal smooth and 't2_ST' a spatio-temporal smooth.
 }
 \description{
-Title Ranks models by GCV, giving the model form for each predictor variable.
+Ranks models by GCV, giving the model form for each predictor variable.
 }
 \examples{
 require(dplyr)

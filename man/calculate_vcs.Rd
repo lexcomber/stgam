@@ -7,11 +7,11 @@
 calculate_vcs(input_data, mgcv_model, terms = NULL)
 }
 \arguments{
-\item{input_data}{the data used to create the GAM model in \code{data.frame}, \code{tibble} or \code{sf} format}
+\item{input_data}{the data used to create the GAM model in \code{data.frame}, \code{tibble} or \code{sf} format. This can be the original data used to create the model or another surface with location and time attributes.}
 
 \item{mgcv_model}{a GAM model with smooths created using the \code{mgcv} package}
 
-\item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in \code{data} )}
+\item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in the \code{input_data} used to construct the model).}
 }
 \value{
 A \code{data.frame} of the input data and the coefficient and standard error estimates for each covariate. It can be used to generate coefficient estimates for specific time slices and over grided surfaces as described in the package vignette.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/evaluate_models.R
 \name{evaluate_models}
 \alias{evaluate_models}
-\title{Title Evaluates multiple models with each predictor variable specified in different ways in order to determining model form}
+\title{Evaluates multiple models with each predictor variable specified in different ways in order to determining model form}
 \usage{
 evaluate_models(
   input_data,
@@ -36,7 +36,7 @@ evaluate_models(
 a \code{data.frame} with indices for each predictor variable, a GCV score (\code{gcv}) for each model and the associated formula (\code{f}), which  should be passed to the \code{gam_model_rank} function.
 }
 \description{
-Title Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
+Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
 }
 \examples{
 require(dplyr)

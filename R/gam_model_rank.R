@@ -1,4 +1,4 @@
-#' Title Ranks models by GCV, giving the model form for each predictor variable.
+#' Ranks models by GCV, giving the model form for each predictor variable.
 #'
 #' @param res_tab a `data.frame` returned from the `evaluate_models()` function.
 #' @param n the number of ranked models to return.

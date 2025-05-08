@@ -1,4 +1,4 @@
-#' Title Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
+#' Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
 #'
 #' @param input_data he data to be used used to create the GAM model in (`data.frame` or `tibble` format), containing an Intercept column to allow it be treated as an addressable term in the model.
 #' @param target_var the name of the target variable.
