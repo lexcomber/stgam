@@ -760,8 +760,8 @@ Sys.time() - t1  # about 14 minutes (6 minutes with 15 cores!)
 
 ```{r echo = F, eval = T}
 # precomputed to get through CRAN checks
-# save(stvc_mods, file = "data/stvc_mods.RData")
-load("data/stvc_mods.RData")
+# save(stvc_mods, file = "stvc_mods.RData")
+load("stvc_mods.RData")
 ```
 
 The best 10  models can be extracted (i.e. those with the lowest GCV score) using the `gam_model_rank()` function in the `stgam` package introduced in Section 3. Interestingly the top 5 ranked models all have space and time specified for each predictor variable, but in different combinations of single and separate space-time smooths.  The top 4 models all have the `beds` predictor variable specified in separate space time smooths, suggesting that while there are space and time dependences with the target variable, there are not space-time ones.   
