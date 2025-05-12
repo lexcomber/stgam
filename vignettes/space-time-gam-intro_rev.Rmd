@@ -743,7 +743,7 @@ These include `cef` (Current energy efficiency rating) `pef` (Potential energy e
 
 The `evaluate_models()` function in the `stgam` package constructs and compares the full set of potential models. It uses the GCV value of each model to evaluate and rank them. Note that in the code below, `ncores` is set to 2 pass CRAN diagnostic checks - you may want to specify more using `detectCores()-1` from the `parallel` package. Remember that the input data needs to have a defined Intercept term which can be created in the following way `input_data |> mutate(Intercept = 1))` (this was done at the start of Section 3 for `hp_data`).
 
-```{r eval_stvc, eval = T, cache = T, warning=F, message=F}
+```{r eval_stvc, eval = F, cache = T, warning=F, message=F}
 library(doParallel)
 t1 <- Sys.time()
 stvc_mods <- evaluate_models(
@@ -758,6 +758,11 @@ stvc_mods <- evaluate_models(
 Sys.time() - t1  # about 14 minutes (6 minutes with 15 cores!)
 ```
 
+```{r echo = F, eval = T}
+# precomputed to get through CRAN checks
+# save(stvc_mods, file = "data/stvc_mods.RData")
+load("data/stvc_mods.RData")
+```
 
 The best 10  models can be extracted (i.e. those with the lowest GCV score) using the `gam_model_rank()` function in the `stgam` package introduced in Section 3. Interestingly the top 5 ranked models all have space and time specified for each predictor variable, but in different combinations of single and separate space-time smooths.  The top 4 models all have the `beds` predictor variable specified in separate space time smooths, suggesting that while there are space and time dependences with the target variable, there are not space-time ones.   
 
@@ -863,7 +868,6 @@ ggplot()  +
 ```
 
 Finally the `l_grid` can be used summarise the coefficient estimates over space and time as well, here summarising each year, approximately described in the `pred_days` object defined above. Notice how the `for` loop below combines all the coefficient estimates this time.  
-
 
 The maps reflect the relatively small changes in the relationship with `priceper` over time plotted above.   
 ```{r svccoefs2, cache = T,  fig.height = 6, fig.width = 7, fig.cap = "The varying `beds` (Bedrooms) coefficient estimates over time and the grid surface."}
