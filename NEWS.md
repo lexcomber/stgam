@@ -25,3 +25,8 @@
 
 * space-time GAMs are reformatted to include Tensor Product smooths for combined space-time 
 * modelling averaging is removed
+
+# stgam 1.0.1
+
+* London borough data (`lb`) corrected  
+* typos in vignette corrected 
