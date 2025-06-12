@@ -30,3 +30,7 @@
 
 * London borough data (`lb`) corrected  
 * typos in vignette corrected 
+
+# stgam 1.0.2
+
+* fix to vignette plot 

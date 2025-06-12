@@ -655,13 +655,12 @@ l_grid |> cbind(res_out) |>
          `2021` = "Y_2021", `2022` = "Y_2022", `2023` = "Y_2023", `2024` = "Y_2024") |>
   pivot_longer(-geometry) |>
   # make the new days object a factor (to enforce plotting order)
-  mutate(name = factor(name, levels = colnames(res_out))) |>
-  
+  mutate(name = factor(name, 2018:2024)) |>
    # 4. and plot 
   ggplot() + 
   geom_sf(aes(fill = value), col = NA) +
   # adjust default shading
-  scale_fill_continuous_c4a_div(name = "Potential Energy\nEfficiency") +
+  scale_fill_continuous_c4a_div(name = tit) +
   # facet
   facet_wrap(~name, ncol = 3) +
   # apply and modify plot theme
