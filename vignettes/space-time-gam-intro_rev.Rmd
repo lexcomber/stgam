@@ -1,6 +1,6 @@
 ---
 title: "A geographer's introduction to space-time regression with GAMs using `stgam`"
-author: "Lex Comber, Paul Harris and Chrs Brunsdon"
+author: "Lex Comber, Paul Harris and Chris Brunsdon"
 date: "April 2025"
 output: rmarkdown::html_vignette
 bibliography: vignette.bib
