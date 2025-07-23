@@ -32,6 +32,7 @@ This code below loads the package and undertakes the proposed workflow for a spa
 library(stgam)
 library(dplyr)
 library(ggplot2)
+library(cols4all)
 
 # define input data
 data("hp_data")
@@ -48,7 +49,7 @@ svc_mods <-
     vars = c("pef", "beds"),
     coords_x = "X",
     coords_y = "Y",
-    STVC = FALSE,
+    VC_type = "SVC",
     time_var = NULL,
     ncores = 2
   )
