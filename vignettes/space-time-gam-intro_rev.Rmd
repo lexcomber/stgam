@@ -374,15 +374,16 @@ The spline approach can be extended to model the target variable in space-time b
 
 ```{r gam.3}
 # the third GAM
-gam.3 <- gam(priceper~t2(X,Y,days, d = c(2,1)), data = hp_data)
+gam.3 <- gam(priceper~te(X,Y,days, d = c(2,1), bs=c('tp','cr')), data = hp_data)
 summary(gam.3)
 ```
 
-It is important to consider the difference between `s(X,Y,days)` (which would a continuation of the format above but has not been run) and `t2(X,Y,days,d=c(2,1))` before examining the resultant GAM (`gam.3`). The spline functions `s()` and `t2()` can model smooth interactions between multiple variables, but they handle dimension scaling, marginal smoothness, and basis construction in different ways. 
+It is important to consider the difference between `s(X,Y,days)` (which would a continuation of the format above but has not been run) and `te(X,Y,days,d = c(2,1),bs=c('tp','cr'))` before examining the resultant GAM (`gam.3`). The spline functions `s()` and `te()` can model smooth interactions between multiple variables, but they handle dimension scaling, marginal smoothness, and basis construction in different ways. 
 
 - `s()` is an *Isotropic smooth*. It is used when all variables are on the same scale and have similar smoothness behaviours (like `X` and `Y`). By default it uses a thin plate regression spline (`bs = "tp"`) and a single basis to model the attribute space. The formulation `s(X,Y,days)` would therefore use a single basis to model a smooth in 3D space, under the assumption that all the variables (`X`, `Y` and `days`) contribute in the same way and at the same scale. This is fine if the variables are numeric, continuous, and in comparable units such as percentages. But not space and time. 
 
-- `t2()` is a *Tensor Product (TP) smooth*. These are used when variables are on different scales or represent different kinds of effects (like `X`, `Y` and `days`). It builds a smooth using separate basis functions for each variable and then combines them. The formulation `t2(X,Y,days,d=c(2,1))` includes the `d` parameter that specifies the dimensions for each basis. Here a 2D basis is specified for `X` and `Y` (location) and a 1D basis for `days` (time). The tensor product smooth is constructed by constructing (marginal) smooths for each and taking the tensor product of those to form the joint smooth. It is useful when the variables to be included in the smooth have different scales or units (e.g., `X` and `Y` are coordinates, `days` is time) and different degrees of smoothness are expected along each variable.
+- `te()` is a *Tensor Product (TP) smooth*. These are used when variables are on different scales or represent different kinds of effects (like `X`, `Y` and `days`). It builds a smooth using separate basis functions for each variable and then combines them. The formulation `te(X,Y,days,d = c(2,1),bs=c('tp','cr'))` includes the `d` parameter that specifies the dimensions for each basis. Here a 2D basis is specified for `X` and `Y` (location) and a 1D basis for `days` (time). It also includes a basis parameter `bs` which specifies a Thin Plate Regression Spline (`tp`) for location and a Cubic Regression Spline (`cr`) for time. Thin plate splines are invariant to coordinate rotation and are ideal for spatial data.
+(regardless of whether the coordinates are in meters, kilometres, or degrees) and Cubic regression splines) are more efficient especially in 1D. The tensor product smooth is constructed by constructing (marginal) smooths for each and taking the tensor product of those to form the joint smooth. It is useful when the variables to be included in the smooth have different scales or units (e.g., `X` and `Y` are coordinates, `days` is time) and different degrees of smoothness are expected along each variable.
 
 Thus, in this case a TP smooth is specified because space and time are combined. The code below examines the results and uses the `mgcv` plot function to show the spatial distributions over 9 discretised time chunks (~310 days). 
 
@@ -581,11 +582,11 @@ Here the relationship of `pef`, the Potential energy efficiency rating, varies o
 
 ### 3.3 Space-Time I
 
-It is also possible to examine the space-time dependencies between the target variable and the predictor variables. The code below specifies a GAM with a space-time smooth for the `pef` variable and a spatially and temporally varying intercept. As before, a TP smooth is used and specified with the dimensions of each basis (a 2D basis for `X` and `Y`; a 1D basis for `days`), as different degrees of smoothness are expected across space and time. In this case, the `pef` variable is still not significant globally, but it is over space and time (`t2(X,Y,days):pef`).  
+It is also possible to examine the space-time dependencies between the target variable and the predictor variables. The code below specifies a GAM with a space-time smooth for the `pef` variable and a spatially and temporally varying intercept. As before, a TP smooth is used and specified with the dimensions of each basis (a 2D basis for `X` and `Y`; a 1D basis for `days`), as different degrees of smoothness are expected across space and time, with different bases as described above. In this case, the `pef` variable is still not significant globally, but it is over space and time (`te(X,Y,days):pef`).  
 
 ```{r gam.st1}
 gam.st1 <- gam(priceper~0 + Intercept + s(X,Y,by=Intercept) + s(days, by=Intercept) +  
-                pef + t2(X,Y,days, d= c(2,1), by = pef), 
+                pef + te(X,Y,days,d = c(2,1),bs=c('tp','cr'), by = pef), 
               data = hp_data)
 summary(gam.st1)
 ```
@@ -681,7 +682,7 @@ l_grid |> cbind(res_out) |>
 
 ### 3.4 Space-Time II
 
-The previous section created a GAM model with a single combined space-time smooth for the `pef` predictor variable. It is also possible to include space and time within separate smooths, as was done to investigate the variability of the target variable. The code snippet below does this, and again includes a space-time varying intercept.
+The previous section created a GAM model with a single combined Tensor Product space-time smooth for the `pef` predictor variable. It is also possible to include space and time within separate smooths, as was done to investigate the variability of the target variable. The code snippet below does this, and again includes a space-time varying intercept.
 
 ```{r gam.st2} 
 gam.st2 <- gam(priceper~0 + Intercept + 
@@ -761,7 +762,7 @@ stvc_mods <- evaluate_models(
   VC_type = "STVC",
   time_var = "days",
   ncores = 2)
-Sys.time() - t1  # about 14 minutes (6 minutes with 15 cores!)
+Sys.time() - t1  # about 10 minutes (less with more cores!)
 ```
 
 ```{r echo = F, eval = T}
@@ -770,7 +771,7 @@ Sys.time() - t1  # about 14 minutes (6 minutes with 15 cores!)
 load("stvc_mods.RData")
 ```
 
-The best $n$ models can be extracted (i.e. those with the lowest GCV score) using the `gam_model_rank()` function in the `stgam` package introduced in Section 3. Interestingly the top 5 ranked models all have space and time specified for each predictor variable, but in different combinations of single and separate space-time smooths.  The top 4 models all have the `beds` predictor variable specified in separate space-time smooths, suggesting that while there are spatial and temporal dependencies with the target variable, there are not interacting space-time ones.   
+The best $n$ models can be extracted (i.e. those with the lowest GCV score) using the `gam_model_rank()` function in the `stgam` package introduced in Section 3. Interestingly the top 7 ranked models all have space and time specified for each predictor variable, but in different combinations of single and separate space-time smooths.  The top 3 models all have the `beds` predictor variable specified in separate space-time smooths, suggesting that while there are spatial and temporal dependencies with the target variable, there are not interacting space-time ones, whereas they are for the Intercept and for the `pef` predictor variable.
 
 ```{r}
 mod_comp <- gam_model_rank(stvc_mods, n= 10)
@@ -789,7 +790,7 @@ f <- as.formula(mod_comp$f[1])
 f
 ```
 
-This formula is used to specify a `mgcv` GAM model using a REML approach. The choice of REML is described in Section 5 below. The resulting model is checked for over-fitting using the `k.check` function in the`mgcv` package. This underpins the `gam.check` function but does not display the diagnostic plots. Here the `k-index` values are near to 1, the `k'` and  `edf` parameters are not close, and importantly the `edf` values are all much less than the `k'` values, so this model is reasonably well tuned. **NB** if the `k'` and  `edf` parameters are close for some smooths, then you may want to increase the `k` parameter in the relevant smooth. These are automatically determined by the `mgcv` package but can be specified manually - see the `mgcv` help for `k.check` and `choose.k`. 
+This formula is used to specify a `mgcv` GAM model using a REML approach. The choice of REML is described in Section 5 below. The resulting model is checked for over-fitting using the `k.check` function in the`mgcv` package. This underpins the `gam.check` function but does not display the diagnostic plots. Here the `k-index` values are near to 1, the `k'` and  `edf` parameters are not close, and importantly the `edf` values are all much less than the `k'` values, so this model is reasonably well tuned. **NB** if the `k'` and  `edf` parameters are close for some smooths, then you may want to increase the `k` parameter in the relevant smooths. These are automatically determined by the `mgcv` package but can be specified manually - see the `mgcv` help for `k.check` and `choose.k`. 
 
 ```{r final_mod, cache = T}
 # specify the model
@@ -798,7 +799,7 @@ gam.m <- gam(f, data = hp_data, method = "REML")
 k.check(gam.m)
 ```
 
-A summary of the model can be examined and this shows that nearly all of the terms are significant except the spatial smooth for `pef` and the temporal smooth for `beds`. 
+A summary of the model can be examined and this shows that nearly all of the terms are significant except the the temporal smooth for `beds`. 
 
 ```{r}
 summary(gam.m)
@@ -818,7 +819,7 @@ vcs <- calculate_vcs(input_data = hp_data,
                     terms = c("Intercept", "pef", "beds"))
 ```
 
-A summary over space and time of the coefficient estimates shows that the intercept the is large and positive and that `pef` and `beds` are generally negative but with some positive values at in some places or at some times.   
+A summary over space and time of the coefficient estimates shows that the intercept the is large and positive and that `pef` and `beds` are generally negative but with some positive values in some places or at some times.   
 ```{r, warning=F, message=FALSE}
 vcs |> select(starts_with("b_")) |>
   apply(2, summary) |> round(1)
@@ -861,7 +862,7 @@ vcs_sf <-
 ggplot()  + 
   geom_sf(data = lb) +
   geom_sf(data = vcs_sf, aes(col = b_pef)) + 
-  scale_colour_continuous_c4a_div(palette="brewer.rd_bu", 
+  scale_colour_continuous_c4a_div(palette="brewer.rd_yl_bu", 
                                   name = "Potential\nEnergy Efficiency") + 
   facet_wrap(~yot) + 
   theme_bw() + 
@@ -882,7 +883,7 @@ ggplot()  +
 Finally the `l_grid` can be used to summarise the coefficient estimates over space and time, here for each year in a slightly different way to the use of `pred_days` above. Notice how the `for` loop below combines all the coefficient estimates this time.  
 
 The maps reflect the relatively small changes in the relationship with `priceper` over time plotted above.   
-```{r svccoefs2, cache = T,  fig.height = 6, fig.width = 7, fig.cap = "The varying `beds` (Bedrooms) coefficient estimates over time and the grid surface."}
+```{r svccoefs2, cache = T,  fig.height = 6, fig.width = 7, fig.cap = "The varying `pef` (Potential energy efficiency rating) coefficient estimates over time and the grid surface."}
 # create time slices
 years <- 2018:2024
 # calculate over the grid for each time slice
@@ -910,12 +911,12 @@ tit <-expression(paste(""*beta[`beds`]*""))
 # join to the grid
 l_grid |> cbind(res_out) |>
   # select the variables and pivot longer
-  select(starts_with("b_beds")) |> 
+  select(starts_with("b_pef")) |> 
   # rename
-  rename(`2018` = "b_beds_2018", `2019` = "b_beds_2019", 
-         `2020` = "b_beds_2020", `2021` = "b_beds_2021", 
-         `2022` = "b_beds_2022", `2023` = "b_beds_2023", 
-         `2024` = "b_beds_2024") |>  
+  rename(`2018` = "b_pef_2018", `2019` = "b_pef_2019", 
+         `2020` = "b_pef_2020", `2021` = "b_pef_2021", 
+         `2022` = "b_pef_2022", `2023` = "b_pef_2023", 
+         `2024` = "b_pef_2024") |>  
   pivot_longer(-geometry) |>
   # make the new days object a factor (to enforce plotting order)
   mutate(name = factor(name, levels = 2018:2024)) |>

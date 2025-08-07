@@ -4,7 +4,7 @@
 #' @param mgcv_model a GAM model with smooths created using the `mgcv` package
 #' @param terms a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in the `input_data` used to construct the model).
 #'
-#' @return A `data.frame` of the input data and the coefficient and standard error estimates for each covariate. It can be used to generate coefficient estimates for specific time slices and over grided surfaces as described in the package vignette.
+#' @return A `data.frame` of the input data, the coefficient estimates, the standard errors and the t-values estimates for each covariate. It can be used to generate coefficient estimates for specific time slices and over gridded surfaces as described in the package vignette.
 #' @importFrom dplyr mutate
 #' @importFrom stats predict
 #'
@@ -23,12 +23,12 @@
 #' # calculate the Varying Coefficients
 #' terms = c("Intercept", "pef", "beds")
 #' vcs = calculate_vcs(input_data, gam.m, terms)
-#' vcs |> select(priceper, X, Y, starts_with(c("b_", "se_")), yhat)
+#' vcs |> select(priceper, X, Y, starts_with(c("b_", "se_", "t_")), yhat)
 #'
 #' @export
 calculate_vcs <- function (input_data, mgcv_model, terms = NULL) {
   . = NULL
-  if(is.null(terms)) {
+  if (is.null(terms)) {
     n_t = 1
   } else {
     n_t = length(terms)
@@ -44,17 +44,19 @@ calculate_vcs <- function (input_data, mgcv_model, terms = NULL) {
     input_data_copy[, terms] = terms_df
     se.j = predict(mgcv_model, se = TRUE, newdata = input_data_copy)$se.fit
     b.j = predict(mgcv_model, newdata = input_data_copy)
+    t.j = b.j/se.j
     expr1 = paste0("b_", terms[i])
     expr2 = paste0("se_", terms[i])
+    expr3 = paste0("t_", terms[i])
     output_data[[expr1]] <- as.vector(unlist(with(output_data, b.j)))
     output_data[[expr2]] <- as.vector(unlist(with(output_data, se.j)))
+    output_data[[expr3]] <- as.vector(unlist(with(output_data, t.j)))
   }
-  if( all(terms %in% names(input_data))) {
+  if (all(terms %in% names(input_data))) {
     output_data$yhat = predict(mgcv_model, newdata = input_data)
   }
   return(output_data)
 }
-
 
 
 

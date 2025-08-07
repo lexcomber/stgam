@@ -14,7 +14,7 @@ calculate_vcs(input_data, mgcv_model, terms = NULL)
 \item{terms}{a vector of names starting with "Intercept" plus the names of the covariates used in the GAM model (these are the names of the variables in the \code{input_data} used to construct the model).}
 }
 \value{
-A \code{data.frame} of the input data and the coefficient and standard error estimates for each covariate. It can be used to generate coefficient estimates for specific time slices and over grided surfaces as described in the package vignette.
+A \code{data.frame} of the input data, the coefficient estimates, the standard errors and the t-values estimates for each covariate. It can be used to generate coefficient estimates for specific time slices and over gridded surfaces as described in the package vignette.
 }
 \description{
 Extracts varying coefficient estimates (for SVC, TVC and STVC models).
@@ -34,6 +34,6 @@ gam.m = gam(priceper ~ Intercept - 1 + s(X, Y, by = Intercept) +
 # calculate the Varying Coefficients
 terms = c("Intercept", "pef", "beds")
 vcs = calculate_vcs(input_data, gam.m, terms)
-vcs |> select(priceper, X, Y, starts_with(c("b_", "se_")), yhat)
+vcs |> select(priceper, X, Y, starts_with(c("b_", "se_", "t_")), yhat)
 
 }

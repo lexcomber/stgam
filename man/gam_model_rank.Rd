@@ -12,7 +12,7 @@ gam_model_rank(res_tab, n = 10)
 \item{n}{the number of ranked models to return.}
 }
 \value{
-a \code{tibble} of the 'n' best models, ranked by GCV, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's_S' a spatial smooth, 's_T'  a temporal smooth and 't2_ST' a spatio-temporal smooth.
+a \code{tibble} of the 'n' best models, ranked by GCV, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's_S' a spatial smooth, 's_T'  a temporal smooth and 'te_ST' a spatio-temporal smooth.
 }
 \description{
 Ranks models by GCV, giving the model form for each predictor variable.

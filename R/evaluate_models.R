@@ -44,15 +44,14 @@
 #'     ncores = 2
 #'   )
 #' head(svc_mods)
-evaluate_models <- function(
-    input_data,
-    target_var,
-    vars,
-    coords_x,
-    coords_y,
-    VC_type = "SVC",
-    time_var = NULL,
-    ncores = 2)
+evaluate_models <- function(input_data,
+                            target_var,
+                            vars,
+                            coords_x,
+                            coords_y,
+                            VC_type = "SVC",
+                            time_var = NULL,
+                            ncores = 2)
 {
   # function to get model intercept terms
   get_form_intercept <- function(index) {
@@ -60,7 +59,7 @@ evaluate_models <- function(
       glue("+s({coords_x},{coords_y},by=Intercept)"),
       glue("+s({time_var},by=Intercept)"),
       glue("+s({coords_x},{coords_y},by=Intercept) + s({time_var},by=Intercept)"),
-      glue("+t2({coords_x},{coords_y},{time_var},d=c(2,1),by=Intercept)"))[index]
+      glue("+te({coords_x},{coords_y},{time_var},d=c(2,1),bs=c('tp','cr'),by=Intercept)"))[index]
   }
 
   # function to get model predictor terms
@@ -70,7 +69,7 @@ evaluate_models <- function(
       glue("+s({coords_x},{coords_y},by={varname})"),
       glue("+s({time_var},by={varname})"),
       glue("+s({coords_x},{coords_y},by={varname}) + s({time_var},by={varname})"),
-      glue("+t2({coords_x},{coords_y},{time_var},d=c(2,1),by={varname})"))[index]
+      glue("+te({coords_x},{coords_y},{time_var},d=c(2,1),bs=c('tp','cr'),by={varname})"))[index]
   }
 
   # function to make TVC index grid
@@ -158,3 +157,4 @@ evaluate_models <- function(
   }
   return(vc_res_gam)
 }
+

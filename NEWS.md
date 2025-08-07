@@ -34,3 +34,7 @@
 # stgam 1.0.2
 
 * fix to vignette plot 
+
+# stgam 1.1.0
+
+* updates to functions and vignette to use te() tensor product smooths for space-time smooths, replacing t2(); inclusion of t-values in coefficient estimates;    

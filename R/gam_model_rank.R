@@ -3,7 +3,7 @@
 #' @param res_tab a `data.frame` returned from the `evaluate_models()` function.
 #' @param n the number of ranked models to return.
 #'
-#' @returns a `tibble` of the 'n' best models, ranked by GCV, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's_S' a spatial smooth, 's_T'  a temporal smooth and 't2_ST' a spatio-temporal smooth.
+#' @returns a `tibble` of the 'n' best models, ranked by GCV, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's_S' a spatial smooth, 's_T'  a temporal smooth and 'te_ST' a spatio-temporal smooth.
 #' @importFrom dplyr relocate
 #' @importFrom dplyr mutate
 #' @importFrom dplyr rename
@@ -36,22 +36,23 @@
 #'     ncores = 2
 #'   )
 #' gam_model_rank(svc_mods)
-gam_model_rank <- function(res_tab, n = 10) {
+gam_model_rank <- function (res_tab, n = 10) {
   Rank <- NULL
   GCV <- NULL
   gcv <- NULL
   nm <- names(res_tab)
   len <- length(nm)
-  res_tab <- res_tab |> rename(GCV = gcv) |> arrange(GCV)
-  int_terms <- function(x) c("Fixed", "s_S", "s_T", "s_T + s_S", "t2_ST")[x]
-  var_terms <- function(x) c("---", "Fixed", "s_S", "s_T", "s_T + s_S", "t2_ST")[x]
+  res_tab <- arrange(rename(res_tab, GCV = gcv), GCV)
+  int_terms <- function(x) c("Fixed", "s_S", "s_T", "s_T + s_S",
+                             "te_ST")[x]
+  var_terms <- function(x) c("---", "Fixed", "s_S", "s_T",
+                             "s_T + s_S", "te_ST")[x]
   out_tab <-
-    mutate(
-      mutate(
-        slice_head(res_tab, n = n),
-        across(nm[2]:nm[len - 2], var_terms)),
-      across(nm[1]:nm[1], int_terms)) |>
-    mutate(Rank = 1:n()) |>
-    dplyr::relocate(Rank)
+    dplyr::relocate(mutate(mutate(mutate(
+      slice_head(res_tab, n = n),
+      across(nm[2]:nm[len - 2], var_terms)),
+      across(nm[1]:nm[1],
+             int_terms)),
+      Rank = 1:n()), Rank)
   return(out_tab)
 }
