@@ -967,7 +967,7 @@ All of the analysis space-time GAM models in Section 4 of this vignette were spe
 
 ### 5.2 Number of knots in space and time
 
-In Section 4.3, the GAM model was checked for under- and over-fitting using the `k.check` function in the`mgcv` package the advice was to increase `k` in the smooths if the `k'` and  `edf` parameters were close. This can be done by specifying it manually in the smooth as in the hypothetical example below.
+In Section 4.3, the GAM model was checked for under- and over-fitting using the `k.check` function in the `mgcv` package the advice was to increase `k` in the smooths if the `k'` and  `edf` parameters were close. This can be done by specifying it manually in the smooth as in the hypothetical example below.
 
 ```{r eval = F}
 gam_m <- gam(y~s(X,Y, by = x, k = 40), data = input_data)
