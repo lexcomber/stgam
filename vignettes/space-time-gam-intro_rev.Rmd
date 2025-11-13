@@ -711,7 +711,7 @@ There 2 important implications that follow from this:
 ## 4. Working with `stgam`: model selection
 
 
-The models in construction in Section 3 used a variety of smooths. For example, the Intercept was modelled a parametric term with separate space and time smooths (in the `gam.st2` model), and the `pef` predictor variable was included in parametric form (`gam.5`), in parametric form with a single space-time smooth (`gam.st1`) and in parametric form with separate space-time smooths (`gam.st2`. This poses the question of which form to use and how to specify the model? Which is best? A key focus of the `stgam` package is to seek to answer this question. It does this by creating and evaluating multiple models. 
+The models in construction in Section 3 used a variety of smooths. For example, the Intercept was modelled a parametric term with separate space and time smooths (in the `gam.st2` model), and the `pef` predictor variable was included in parametric form (`gam.5`), in parametric form with a single space-time smooth (`gam.st1`) and in parametric form with separate space-time smooths (`gam.st2`). This poses the question of which form to use and how to specify the model? Which is best? A key focus of the `stgam` package is to seek to answer this question. It does this by creating and evaluating multiple models. 
 
 ### 4.1 Using GCV to evaluate GAMs with smooths
 
@@ -790,7 +790,7 @@ f <- as.formula(mod_comp$f[1])
 f
 ```
 
-This formula is used to specify a `mgcv` GAM model using a REML approach. The choice of REML is described in Section 5 below. The resulting model is checked for over-fitting using the `k.check` function in the`mgcv` package. This underpins the `gam.check` function but does not display the diagnostic plots. Here the `k-index` values are near to 1, the `k'` and  `edf` parameters are not close, and importantly the `edf` values are all much less than the `k'` values, so this model is reasonably well tuned. **NB** if the `k'` and  `edf` parameters are close for some smooths, then you may want to increase the `k` parameter in the relevant smooths. These are automatically determined by the `mgcv` package but can be specified manually - see the `mgcv` help for `k.check` and `choose.k`. 
+This formula is used to specify a `mgcv` GAM model using a REML approach. The choice of REML is described in Section 5 below. The resulting model is checked for over-fitting using the `k.check` function in the `mgcv` package. This underpins the `gam.check` function but does not display the diagnostic plots. Here the `k-index` values are near to 1, the `k'` and  `edf` parameters are not close, and importantly the `edf` values are all much less than the `k'` values, so this model is reasonably well tuned. **NB** if the `k'` and  `edf` parameters are close for some smooths, then you may want to increase the `k` parameter in the relevant smooths. These are automatically determined by the `mgcv` package but can be specified manually - see the `mgcv` help for `k.check` and `choose.k`. 
 
 ```{r final_mod, cache = T}
 # specify the model
@@ -948,14 +948,14 @@ l_grid |> cbind(res_out) |>
 
 This section has illustrated the the use of functions in the the `stgam` package. It suggests the following workflow:
 
-1.  Prepare the data: lengthen the `data.frame`, `tibble` or `sf` object containing the data to have single location and time variables for each observation (in the above examples  these were `X`,`Y`and `days`), and an Intercept as an addressable term.
+1.  Prepare the data: lengthen the `data.frame`, `tibble` or `sf` object containing the data to have single location and time variables for each observation (in the above examples  these were `X`,`Y` and `days`), and an Intercept as an addressable term.
 2.  Evaluate all possible models. For spatial or temporal problems each predictor is specified in 3 ways, for space-time problems each predictor is specified in 6 ways.
 3.  Rank the models by their GCV score, identify any consistent model specification trends in the top ranked models and select the best model with the lowest GCV score.
 4.  Extract the formula and create the final model.
 5.  Calculate the varying coefficient estimates: to quantify how the relationships between the target and predictor variables vary over space, time or space-time.
 6.  Create maps, time series plots etc
 
-This workflow evaluates and ranks multiple models using model GCV value. This was done algorithmically using the `evaluate_models` function. However, this was not undertaken in isolation. Rather it built on the investigations in Section 3 to determine whether space and time effects were present in the data.  This set of model investigations were undertaken to both develop and confirm knowledge of processes related to house prices in London. That is, the analysis was both considered and contextual. For example, in Section 3 it was determined that a varying intercept term was appropriate and with a different dataset there may be a need to explore different avenues. Similarly more of the model space could have been examined, for example to include `cef` in the models. The `stgam` package allows these choices to be validated through an automated approach, providing an exploration of the full set of potential choices. The the GCV as an unbiased risk estimator was useful helping to evaluate models 
+This workflow evaluates and ranks multiple models using model GCV value. This was done algorithmically using the `evaluate_models` function. However, this was not undertaken in isolation. Rather it built on the investigations in Section 3 to determine whether space and time effects were present in the data.  This set of model investigations were undertaken to both develop and confirm knowledge of processes related to house prices in London. That is, the analysis was both considered and contextual. For example, in Section 3 it was determined that a varying intercept term was appropriate and with a different dataset there may be a need to explore different avenues. Similarly more of the model space could have been examined, for example to include `cef` in the models. The `stgam` package allows these choices to be validated through an automated approach, providing an exploration of the full set of potential choices. The GCV as an unbiased risk estimator was useful helping to evaluate models 
  
 
 
@@ -967,7 +967,7 @@ All of the analysis space-time GAM models in Section 4 of this vignette were spe
 
 ### 5.2 Number of knots in space and time
 
-In Section 4.3, the GAM model was checked for under- and over-fitting using the `k.check` function in the`mgcv` package the advice was to increase `k` in the smooths if the `k'` and  `edf` parameters were close. This can be done by specifying it manually in the smooth as in the hypothetical example below.
+In Section 4.3, the GAM model was checked for under- and over-fitting using the `k.check` function in the `mgcv` package the advice was to increase `k` in the smooths if the `k'` and  `edf` parameters were close. This can be done by specifying it manually in the smooth as in the hypothetical example below.
 
 ```{r eval = F}
 gam_m <- gam(y~s(X,Y, by = x, k = 40), data = input_data)
