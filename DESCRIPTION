@@ -25,9 +25,9 @@ Suggests:
     rmarkdown,
     sf,
     testthat (>= 3.0.0),
-    tidyr
-    lubridate
-    purrr
+    tidyr,
+    lubridate,
+    purrr,
     stringr
 Config/testthat/edition: 3
 URL: https://github.com/lexcomber/stgam
