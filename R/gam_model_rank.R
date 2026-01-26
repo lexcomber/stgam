@@ -1,4 +1,4 @@
-#' Ranks models by GCV, giving the model form for each predictor variable.
+#' Ranks models by AIC, giving the model form for each predictor variable.
 #'
 #' @param res_tab a `data.frame` returned from the `evaluate_models()` function.
 #' @param n the number of ranked models to return.
@@ -15,12 +15,17 @@
 #' @importFrom stringr str_replace
 #' @importFrom stringr str_detect
 #' @importFrom purrr map2_chr
+#' @importFrom magrittr %>%
+#' @importFrom utils head
+#' @importFrom mgcv k.check
+#' @importFrom stats as.formula
 #'
 #' @examples
 #' require(dplyr)
 #' require(stringr)
 #' require(purrr)
 #' require(doParallel)
+#' require(sf)
 #'
 #' # define input data
 #' data("chaco")
@@ -45,7 +50,7 @@
 #' # rank the models
 #' gam_model_rank(svc_mods)
 #' @export
-gam_model_rank <- function(res_tab = stvc_mods, n = 10) {
+gam_model_rank <- function(res_tab, n = 10) {
   ks_col <- which(names(res_tab) == "ks")
   smooth_cols <- 1:(ks_col-1)
   nm <- names(res_tab)

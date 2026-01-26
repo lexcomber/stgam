@@ -7,7 +7,7 @@
 evaluate_models(
   input_data,
   target_var,
-  family = "gaussian()",
+  model_family = "gaussian()",
   vars,
   coords_x = "X",
   coords_y = "Y",
@@ -27,6 +27,8 @@ evaluate_models(
 \item{input_data}{he data to be used used to create the GAM model in (\code{data.frame} or \code{tibble} format), containing an Intercept column to allow it be treated as an addressable term in the model.}
 
 \item{target_var}{the name of the target variable.}
+
+\item{model_family}{the mdoel family, defaults to Guassian}
 
 \item{vars}{a vector of the predictor variable names (without the Intercept).}
 
@@ -55,7 +57,7 @@ evaluate_models(
 \item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.}
 }
 \value{
-a \code{data.frame} with indices for each predictor variable, a GCV score (\code{gcv}) for each model and the associated formula (\code{f}), which  should be passed to the \code{gam_model_rank} function.
+a \code{data.frame} with indices for each predictor variable, the knots specified in each smooth (\code{ks}), a AIC score (\code{aic}) for each model and the associated formula (\code{f}). The output should be passed to the \code{gam_model_rank} function.
 }
 \description{
 Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
@@ -63,6 +65,7 @@ Evaluates multiple models with each predictor variable specified in different wa
 \examples{
 require(dplyr)
 require(doParallel)
+require(sf)
 
 # define input data
 data("chaco")
@@ -79,6 +82,7 @@ svc_mods <-
   evaluate_models(
     input_data = input_data,
     target_var = "ndvi",
+    model_family = "gaussian()",
     vars = c("tmax"),
     coords_x = "X",
     coords_y = "Y",
@@ -93,6 +97,7 @@ svc_k1_mods <-
     input_data = input_data,
     target_var = "ndvi",
     vars = c("tmax"),
+    model_family = "gaussian()",
     coords_x = "X",
     coords_y = "Y",
     VC_type = "SVC",
@@ -108,6 +113,7 @@ svc_k1_mods
 svc_k2_mods <-
   evaluate_models(
     input_data = input_data,
+    model_family = "gaussian()",
     target_var = "ndvi",
     vars = c("tmax"),
     coords_x = "X",

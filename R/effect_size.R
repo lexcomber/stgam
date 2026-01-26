@@ -3,7 +3,7 @@
 #' @param mgcv_model a GAM model created by the `mgcv` package
 #' @param digits the number of significant figures of uysed to report effect size
 #'
-#' @returns a `tibble` of the 'n' best models, ranked by GCV, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's_S' a spatial smooth, 's_T'  a temporal smooth and 'te_ST' a spatio-temporal smooth.
+#' @returns a matrix of the model terms, the size of the effect (range) ad standard deviation (sd)
 #' @importFrom mgcv predict.gam
 #'
 #' @examples

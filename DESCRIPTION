@@ -11,7 +11,7 @@ Author: Lex Comber [aut, cre],
   Paul Harris [ctb],
   Chris Brunsdon [ctb]
 Maintainer: Lex Comber <a.comber@leeds.ac.uk>
-Description: A framework for specifying space-time varying coefficient models using Generalized Additive Models (GAMs) with smooths. The smooths are parameterised with location, time and predictor variables. The framework suggests the need to investigate for the presence and nature of any space-time dependencies in the data. It proposes a workflow that creates and refines an initial space-time GAM and includes tools to create and evaluate multiple model forms. The workflow sequence is to: i) Prepare the data by lengthening it to have a single location and time variables for each observation. ii) Evaluate all possible spatial and/or temporal models in which each predictor is specified in different ways. iii) Evaluate each model and pick the best one. iv) Create the final model. v) Calculate the varying coefficient estimates to quantify how the relationships between the target and predictor variables vary over space, time or space-time. vi) Create maps, time series plots etc. The number of knots used in each smooth can be specified directly or iteratively increased. This builds on work in Comber et al (2024) <doi:10.1080/13658816.2023.2270285> and Comber et al (2004) <doi:10.3390/ijgi13120459>.
+Description: This package provides a framework for specifying space-time varying coefficient models using Generalized Additive Models (GAMs) with smooths. It builds on GAM functionality from the `mgcv` package. The smooths are parameterised with location, time and predictor variables. The framework suggests the need to investigate for the presence and nature of any space-time dependencies in the data. It proposes a workflow that creates and refines an initial space-time GAM and includes tools to create and evaluate multiple model forms. The workflow sequence is to: i) Prepare the data (`data.frame`, `tibble` or `sf` object) by lengthening it to have a single location and time variables for each observation. ii) Create all possible space and/or time models in which each predictor is specified in different ways in smooths. iii) Evaluate each model via their AIC value and pick the best one. iv) Create the final model. v) Calculate the varying coefficient estimates to quantify how the relationships between the target and predictor variables vary over space, time or space-time. vi) Create maps, time series plots etc. The number of knots used in each smooth can be specified directly or iteratively increased. This is ilustrated with a point dataset of NDVI and climate data. The data are sample of 2000 observations of Normalised Difference Vegetation Index (NDVI) (2012-2022) of the Chaco dry rainforest in South America with some climate data. This builds on work in Comber et al (2024) <doi:10.1080/13658816.2023.2270285> and Comber et al (2004) <doi:10.3390/ijgi13120459>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
@@ -21,14 +21,13 @@ Suggests:
     knitr,  
     ggplot2,
     cowplot,
-    purrr,
     rmarkdown,
-    sf,
     testthat (>= 3.0.0),
     tidyr,
     lubridate,
-    purrr,
-    stringr
+    sf,
+    gratia,
+    kableExtra
 Config/testthat/edition: 3
 URL: https://github.com/lexcomber/stgam
 BugReports: https://github.com/lexcomber/stgam/issues
@@ -41,5 +40,8 @@ Imports:
     foreach,
     doParallel,
     parallel,
-    dplyr
+    dplyr,
+    magrittr,
+    purrr,
+    stringr
 VignetteBuilder: knitr

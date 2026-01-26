@@ -12,7 +12,7 @@ effect_size(mgcv_model, digits = 3)
 \item{digits}{the number of significant figures of uysed to report effect size}
 }
 \value{
-a \code{tibble} of the 'n' best models, ranked by GCV, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's_S' a spatial smooth, 's_T'  a temporal smooth and 'te_ST' a spatio-temporal smooth.
+a matrix of the model terms, the size of the effect (range) ad standard deviation (sd)
 }
 \description{
 Quantifies the relative effect sizes of each component of zmgcv` GAM model.

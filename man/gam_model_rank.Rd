@@ -2,9 +2,9 @@
 % Please edit documentation in R/gam_model_rank.R
 \name{gam_model_rank}
 \alias{gam_model_rank}
-\title{Ranks models by GCV, giving the model form for each predictor variable.}
+\title{Ranks models by AIC, giving the model form for each predictor variable.}
 \usage{
-gam_model_rank(res_tab = stvc_mods, n = 10)
+gam_model_rank(res_tab, n = 10)
 }
 \arguments{
 \item{res_tab}{a \code{data.frame} returned from the \code{evaluate_models()} function.}
@@ -15,13 +15,14 @@ gam_model_rank(res_tab = stvc_mods, n = 10)
 a \code{tibble} of the 'n' best models, ranked by AIC, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's(S)' a spatial smooth, 's(T)'  a temporal smooth and 'te(ST)' a combined space-time smooth. Model AIC is reported as are the knots in each smooth (\code{ks}) and the formula of each model (\code{f}).
 }
 \description{
-Ranks models by GCV, giving the model form for each predictor variable.
+Ranks models by AIC, giving the model form for each predictor variable.
 }
 \examples{
 require(dplyr)
 require(stringr)
 require(purrr)
 require(doParallel)
+require(sf)
 
 # define input data
 data("chaco")

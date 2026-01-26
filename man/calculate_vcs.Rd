@@ -23,17 +23,17 @@ Extracts varying coefficient estimates (for SVC, TVC and STVC models).
 require(dplyr)
 require(doParallel)
 # define input data
-data("hp_data")
+data("chaco")
 input_data <-
-  hp_data |>
+  chaco |>
   # create Intercept as an addressable term
   mutate(Intercept = 1)
 # create a model for example as result of running `evaluate_models`
-gam.m = gam(priceper ~ Intercept - 1 + s(X, Y, by = Intercept) +
- s(X, Y, by = pef) + s(X, Y, by = beds), data = input_data)
+gam.m = gam(ndvi ~ 0 + s(X, Y, by = Intercept) +
+ s(X, Y, by = tmax) + s(X, Y, by = pr), data = input_data)
 # calculate the Varying Coefficients
-terms = c("Intercept", "pef", "beds")
+terms = c("Intercept", "tmax", "pr")
 vcs = calculate_vcs(input_data, gam.m, terms)
-vcs |> select(priceper, X, Y, starts_with(c("b_", "se_", "t_")), yhat)
+vcs |> select(ndvi, X, Y, starts_with(c("b_", "se_", "t_")), yhat)
 
 }

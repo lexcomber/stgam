@@ -3,6 +3,7 @@
 #' @param input_data he data to be used used to create the GAM model in (`data.frame` or `tibble` format), containing an Intercept column to allow it be treated as an addressable term in the model.
 #' @param target_var the name of the target variable.
 #' @param vars a vector of the predictor variable names (without the Intercept).
+#' @param model_family the mdoel family, defaults to Guassian
 #' @param coords_x the name of the X, Easting or Longitude variable in `input_data`.
 #' @param coords_y the name of the Y, Northing or Latitude variable in `input_data`.
 #' @param VC_type the type of varying coefficient model: options are "TVC" for temporally varying, "SVC" for spatially varying  and "STVC" for space-time.
@@ -16,22 +17,28 @@
 #' @param max_iter the maximum number of iterations that `k` is increased.
 #' @param ncores the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.
 #'
-#' @returns a `data.frame` with indices for each predictor variable, a GCV score (`gcv`) for each model and the associated formula (`f`), which  should be passed to the `gam_model_rank` function.
+#' @returns a `data.frame` with indices for each predictor variable, the knots specified in each smooth (`ks`), a AIC score (`aic`) for each model and the associated formula (`f`). The output should be passed to the `gam_model_rank` function.
 #' @importFrom glue glue
 #' @importFrom dplyr mutate
 #' @importFrom mgcv gam
 #' @importFrom mgcv te
 #' @importFrom mgcv s
+#' @importFrom mgcv k.check
 #' @importFrom parallel makeCluster
 #' @importFrom doParallel registerDoParallel
 #' @importFrom foreach foreach
 #' @importFrom foreach "%dopar%"
 #' @importFrom parallel stopCluster
 #' @importFrom stats formula
+#' @importFrom stats as.formula
+#' @importFrom stats family
+#' @importFrom utils installed.packages
+#' @importFrom stats sd
 #'
 #' @examples
 #' require(dplyr)
 #' require(doParallel)
+#' require(sf)
 #'
 #' # define input data
 #' data("chaco")
@@ -48,6 +55,7 @@
 #'   evaluate_models(
 #'     input_data = input_data,
 #'     target_var = "ndvi",
+#'     model_family = "gaussian()",
 #'     vars = c("tmax"),
 #'     coords_x = "X",
 #'     coords_y = "Y",
@@ -62,6 +70,7 @@
 #'     input_data = input_data,
 #'     target_var = "ndvi",
 #'     vars = c("tmax"),
+#'     model_family = "gaussian()",
 #'     coords_x = "X",
 #'     coords_y = "Y",
 #'     VC_type = "SVC",
@@ -77,6 +86,7 @@
 #' svc_k2_mods <-
 #'   evaluate_models(
 #'     input_data = input_data,
+#'     model_family = "gaussian()",
 #'     target_var = "ndvi",
 #'     vars = c("tmax"),
 #'     coords_x = "X",
@@ -92,7 +102,7 @@
 #' @export
 evaluate_models <- function(input_data,
                             target_var,
-                            family = "gaussian()",
+                            model_family = "gaussian()",
                             vars,
                             coords_x = "X",
                             coords_y = "Y",
@@ -229,7 +239,7 @@ evaluate_models <- function(input_data,
     return(form_new)
   }
   ## 2.2 Iteratively increase k
-  iterate_increase_k <- function(m, k2edf_ratio, k_multiplier, max_iter) {
+  iterate_increase_k <- function(m, k2edf_ratio, k_multiplier, max_iter, model_family) {
     old_m <- m
     iteration <- 1
     repeat {
@@ -254,7 +264,7 @@ evaluate_models <- function(input_data,
       new_formula <- as.formula(new_formula_str)
       # 5. Refit model
       old_m <- m
-      m <- try(gam(new_formula, data = m$model, method = m$method, family = m$family),
+      m <- try(gam(new_formula, data = m$model, method = m$method, family = model_family),
                silent = TRUE)
       # check for running out of degrees of freedom
       if (inherits(m, "try-error")) {
@@ -340,10 +350,12 @@ evaluate_models <- function(input_data,
     indices <- unlist(terms_grid[i, ])
     f <- get_formula(indices, k_set)
     input_data <- dplyr::mutate(input_data, Intercept = 1)
-    m <- mgcv::gam(f, data = input_data, method = "REML", family = family)
+    m <- mgcv::gam(f, data = input_data, method = "REML", family = model_family)
     if(k_increase) {
       m <- iterate_increase_k(m, k2edf_ratio = k2edf_ratio,
-                              k_multiplier = k_multiplier, max_iter = max_iter)
+                              k_multiplier = k_multiplier,
+                              max_iter = max_iter,
+                              model_family = model_family)
     }
     ks <- k.check(m)[,1] |> as.vector()
     ks <- gsub(", ", ", ", toString(ks))
