@@ -26,35 +26,64 @@
 #' vcs |> select(priceper, X, Y, starts_with(c("b_", "se_", "t_")), yhat)
 #'
 #' @export
-calculate_vcs <- function (input_data, mgcv_model, terms = NULL) {
-  . = NULL
+calculate_vcs <- function(input_data, mgcv_model, terms = NULL) {
+  # --- Input validation ---
+  if (!inherits(mgcv_model, "gam")) {
+    stop("Error: 'mgcv_model' must be a GAM object from mgcv::gam().")
+  }
+  if (!is.data.frame(input_data)) {
+    stop("Error: 'input_data' must be a data.frame.")
+  }
   if (is.null(terms)) {
-    n_t = 1
-  } else {
-    n_t = length(terms)
+    # Default to all parametric terms
+    terms <- attr(mgcv_model$terms, "term.labels")
   }
-  input_data_copy = input_data
-  output_data = input_data
-  for (i in 1:n_t) {
-    zeros = rep(0, n_t)
-    zeros[i] = 1
-    terms_df = data.frame(matrix(rep(zeros, nrow(input_data)),
-                                 ncol = n_t, byrow = T))
-    names(terms_df) = terms
-    input_data_copy[, terms] = terms_df
-    se.j = predict(mgcv_model, se = TRUE, newdata = input_data_copy)$se.fit
-    b.j = predict(mgcv_model, newdata = input_data_copy)
-    t.j = b.j/se.j
-    expr1 = paste0("b_", terms[i])
-    expr2 = paste0("se_", terms[i])
-    expr3 = paste0("t_", terms[i])
-    output_data[[expr1]] <- as.vector(unlist(with(output_data, b.j)))
-    output_data[[expr2]] <- as.vector(unlist(with(output_data, se.j)))
-    output_data[[expr3]] <- as.vector(unlist(with(output_data, t.j)))
+  if (!all(terms %in% names(input_data))) {
+    missing_terms <- setdiff(terms, names(input_data))
+    stop(paste("Error: The following terms are missing from input_data:",
+               paste(missing_terms, collapse = ", ")))
   }
+  if (is.null(terms)) {
+    terms <- names(input_data)
+  }
+  n_t <- length(terms)
+
+  # preallocate output list
+  output_data <- input_data
+
+  # create a template for modifying predictor columns
+  input_data_copy <- input_data
+  n_rows <- nrow(input_data)
+
+  # build all term-modified datasets at once
+  term_mats <- diag(n_t)
+  colnames(term_mats) <- terms
+
+  # loop over terms efficiently
+  for (i in seq_len(n_t)) {
+    # assign 0/1 indicators for this term
+    for (t in seq_along(terms)) {
+      input_data_copy[[terms[t]]] <- term_mats[i, t]
+    }
+
+    # single predict() call returning both fit and SE
+    pred <- predict(mgcv_model, newdata = input_data_copy, se.fit = TRUE)
+    b.j  <- pred$fit
+    se.j <- pred$se.fit
+    t.j  <- b.j / se.j
+
+    # append results
+    term_i <- terms[i]
+    output_data[[paste0("b_", term_i)]]  <- b.j
+    output_data[[paste0("se_", term_i)]] <- se.j
+    output_data[[paste0("t_", term_i)]]  <- t.j
+  }
+
+  # optional predicted response (only if all terms present)
   if (all(terms %in% names(input_data))) {
-    output_data$yhat = predict(mgcv_model, newdata = input_data)
+    output_data$yhat <- predict(mgcv_model, newdata = input_data)
   }
+
   return(output_data)
 }
 

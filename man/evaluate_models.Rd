@@ -7,11 +7,19 @@
 evaluate_models(
   input_data,
   target_var,
+  family = "gaussian()",
   vars,
-  coords_x,
-  coords_y,
+  coords_x = "X",
+  coords_y = "Y",
   VC_type = "SVC",
   time_var = NULL,
+  k_set = FALSE,
+  spatial_k = 50,
+  temporal_k = 10,
+  k_increase = FALSE,
+  k2edf_ratio = 1.5,
+  k_multiplier = 2,
+  max_iter = 10,
   ncores = 2
 )
 }
@@ -26,9 +34,23 @@ evaluate_models(
 
 \item{coords_y}{the name of the Y, Northing or Latitude variable in \code{input_data}.}
 
-\item{VC_type}{the type of varying coefficient model: options are "TVC" for temporally varying, "SVC" for spatially varying  and "STVC" for space-time .}
+\item{VC_type}{the type of varying coefficient model: options are "TVC" for temporally varying, "SVC" for spatially varying  and "STVC" for space-time.}
 
 \item{time_var}{the name of the time variable if undertaking STVC model evaluations.}
+
+\item{k_set}{a logical value for user defined \code{k} values. The default is \code{FALSE}. Cannot be used with \code{k_increase}.}
+
+\item{spatial_k}{the value of \code{k} for spatial smooths if \code{k_set} is \code{TRUE}.}
+
+\item{temporal_k}{the value of \code{k} for temporal smooths if \code{k_set} is \code{TRUE}.}
+
+\item{k_increase}{a logical value of whether to check and increase the number of knots in each smooth. The default is \code{FALSE}.}
+
+\item{k2edf_ratio}{a threshold of the ratio of the number of knots, \code{k}, in each smooth to its Effective Degrees of Freedom. If any smooth has a \emph{knots-to-EDF} ratio less than this value then the knots are iteratively increased by the \code{k_multiplier} value until the threshold check is passed, the number knots passes the maximum degrees of freedom, or the number of iterations, \code{max_iter} is reached. Cannot be used with \code{k_set}.}
+
+\item{k_multiplier}{a multiplier by which the knots are increased on each iteration. The default is 2.}
+
+\item{max_iter}{the maximum number of iterations that \code{k} is increased.}
 
 \item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.}
 }
@@ -41,23 +63,61 @@ Evaluates multiple models with each predictor variable specified in different wa
 \examples{
 require(dplyr)
 require(doParallel)
+
 # define input data
-data("hp_data")
+data("chaco")
 input_data <-
-  hp_data |>
+  chaco |>
   # create Intercept as an addressable term
-  mutate(Intercept = 1)
+  mutate(Intercept = 1) |>
+  # remove the geometry
+  st_drop_geometry()
+
 # evaluate different model forms
+# example 1 with 6 models and no `k` adjustment
 svc_mods <-
   evaluate_models(
     input_data = input_data,
-    target_var = "priceper",
-    vars = c("pef"),
+    target_var = "ndvi",
+    vars = c("tmax"),
+    coords_x = "X",
+    coords_y = "Y",
+    VC_type = "SVC"
+  )
+# have a look!
+svc_mods
+
+# example 2 with 6 models and `k` adjustment
+svc_k1_mods <-
+  evaluate_models(
+    input_data = input_data,
+    target_var = "ndvi",
+    vars = c("tmax"),
+    coords_x = "X",
+    coords_y = "Y",
+    VC_type = "SVC",
+    k_increase = TRUE,
+    k2edf_ratio = 1.5,
+    k_multiplier = 2,
+    max_iter = 10
+  )
+# have a look!
+svc_k1_mods
+
+# example 3 with 6 models and `k` set by user
+svc_k2_mods <-
+  evaluate_models(
+    input_data = input_data,
+    target_var = "ndvi",
+    vars = c("tmax"),
     coords_x = "X",
     coords_y = "Y",
     VC_type = "SVC",
     time_var = NULL,
-    ncores = 2
+    k_set = TRUE,
+    spatial_k = 20,
   )
-head(svc_mods)
+# have a look!
+svc_k2_mods
+
 }

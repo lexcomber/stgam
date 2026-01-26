@@ -37,4 +37,13 @@
 
 # stgam 1.1.0
 
-* updates to functions and vignette to use te() tensor product smooths for space-time smooths, replacing t2(); inclusion of t-values in coefficient estimates;    
+* updates to functions and vignette to use `te()` tensor product smooths for space-time smooths, replacing `t2()`
+* inclusion of t-values in coefficient estimates    
+
+# stgam 1.2.0
+
+* updates to main function (`evaluate_models()`) for user specification of `k` or to increase `k` automatically
+* new function for quantifying the effect size of each model term (`effect_size()`)
+* updates to `gam_model_rank` to evaluate models by AIC and to report `k` for each smooth
+* new vignettes 
+* new case study dataset  

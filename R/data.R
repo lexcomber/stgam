@@ -1,40 +1,25 @@
-#' London House Price dataset (Terraced, 2018-2024)
+#' Chaco dry rainforest dataset (2012-2022)
 #'
-#' A dataset of a sample terraced houses sales in the London area for 2018 to 2024.
+#' A point dataset of NDVI and climate data. The data are sample of 2000 observations of Normalised Difference Vegetation Index (NDVI) (2012-2022) of the Chaco dry rainforest in South America with some climate data. These are found via Google Earth Engine (Gorelick et al., 2017). The NDVI data is sourced from the PKU GIMMS NDVI v1.2 dataset, which provides NDVI observations at 1/12° spatial resolution at bi-monthly intervals from 1982 to 2022 (Li et al., 2023). The climate data was derived from the TerraClimate dataset (IDAHO_EPSCOR/TERRACLIMATE). Maximum temperature (`tmax`) and Precipitation (`pr`) were selected and means calculated for each monthly image across all pixels.
 #'
-#' @format A tibble with 1888 rows and 13 columns.
+#' @format A `sf` POINT dataset with 2000 observations and 12 fields.
 #' \describe{
-#' \item{price}{The house price in £1000s}
-#' \item{priceper}{The house price per square metre in £s}
-#' \item{tfa}{Total floor area}
-#' \item{dot}{Date of transfer (sale))}
-#' \item{yot}{Year of transfer (sale)}
-#' \item{beds}{Number of bedrooms}
-#' \item{type}{House type - here all `T` (terraced)}
-#' \item{cef}{Current energy efficiency rating (values from 0-100)}
-#' \item{pef}{Potential energy efficiency rating (values from 0-100)}
-#' \item{ageb}{The age band of the house constructtion}
-#' \item{lad}{The local authority district code of the property location}
-#' \item{X}{Easting in metres derived from the geometric centroid (in OSGB projecttion - EPSG 27700) of the postcode of the sale}
-#' \item{Y}{Northing in metres derived from the geometric centroid (in OSGB projecttion - EPSG 27700) of the postcode of the sale}
+#' \item{id}{An observation identifier}
+#' \item{ndvi}{Normalised Difference Vegetation Index (NDVI)}
+#' \item{tmax}{Maximum temperature (°C)}
+#' \item{pr}{Preciptation}
+#' \item{month}{A continous integer variable from 1 to 120}
+#' \item{year}{The year of observation}
+#' \item{lon}{Longitude in degrees (WGS84)}
+#' \item{lat}{Latitude in degrees (WGS84)}
+#' \item{X}{Easting in metres from the SIRGAS 2000 / Brazil Mercator projection (EPSG:5641)}
+#' \item{Y}{Northing in metres from the SIRGAS 2000 / Brazil Mercator projection (EPSG:5641)}
+#' \item{geometry}{The spatial geometry of the observation in the SIRGAS 2000 / Brazil Mercator projection (EPSG:5641)}
 #' }
-#' @source Chi, Bin, Dennett, Adam, Oléron-Evans, Thomas and Robin Morphet. 2025. House Price per Square Metre in England and Wales (https://data.london.gov.uk/dataset/house-price-per-square-metre-in-england-and-wales)
+#' @source Gorelick, N., Hancher, M., Dixon, M., Ilyushchenko, S., Thau, D., & Moore, R. (2017). Google Earth Engine: Planetary-scale geospatial analysis for everyone. Remote Sensing of Environment, 202, 18–27. https://doi.org/10.1016/J.RSE.2017.06.031
+#' @source Li, M., Cao, S., Zhu, Z., Wang, Z., Myneni, R. B., & Piao, S. (2023). Spatiotemporally consistent global dataset of the GIMMS Normalized Difference Vegetation Index (PKU GIMMS NDVI) from 1982 to 2022. Earth System Science Data, 15(9), 4181–4203. https://doi.org/10.5194/ESSD-15-4181-2023
 #'
 #' @examples
-#' data("hp_data")
-"hp_data"
-
-#' London borough boundaries
-#'
-#' A spatial dataset of of the boundaries of the 33 London Boroughs extracted from the `GWModel` package, cleaned and converted to `sf`.
-#'
-#' @format A `sf` polygon (MULTIPOLYGON) dataset with 33 observations and 2 fields.
-#' \describe{
-#' \item{name}{The name of the London borough}
-#' \item{lad}{The ONS lcoal authrority district code for the borough}
-#' }
-#' @source Lu, Binbin, Harris, Paul, Charlton, Martin, Brunsdon, Chris, Nakaya, Tomoki, Murakami, Daisuke, Hu, Yigong, Evans, Fiona H, Høglund, Hjalmar. 2024. Geographically-Weighted Models
-#'
-#' @examples
-#' data("lb")
-"lb"
+#' library(sf)
+#' data("chaco")
+"chaco"
