@@ -1,4 +1,4 @@
-#' Chaco dry rainforest dataset (2012-2022)
+#' Chaco dry rainforest data (2012-2022)
 #'
 #' A point dataset of NDVI and climate data. The data are sample of 2000 observations of Normalised Difference Vegetation Index (NDVI) (2012-2022) of the Chaco dry rainforest in South America with some climate data. These are found via Google Earth Engine (Gorelick et al., 2017). The NDVI data is sourced from the PKU GIMMS NDVI v1.2 dataset, which provides NDVI observations at 1/12° spatial resolution at bi-monthly intervals from 1982 to 2022 (Li et al., 2023). The climate data was derived from the TerraClimate dataset (IDAHO_EPSCOR/TERRACLIMATE). Maximum temperature (`tmax`) and Precipitation (`pr`) were selected and means calculated for each monthly image across all pixels.
 #'
