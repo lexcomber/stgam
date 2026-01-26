@@ -24,7 +24,7 @@ remotes::install_github("lexcomber/stgam", build_vignettes = TRUE, force = T)
 
 ## Example
 
-This code below loads the package and undertakes the proposed workflow for a spatially varying coefficient model using GAMs with spatial smooths. Note there are in `evaluate_modesl()` options for increasing the smooth bases (`k`) that are not done here.
+This code below loads the package and undertakes the proposed workflow for a spatially varying coefficient model using GAMs with spatial smooths. Note there are in `evaluate_modesl()` options for increasing the smooth bases (`k`). These  are not done here.
 
 ``` r
 # a spatially varying coefficient model example
