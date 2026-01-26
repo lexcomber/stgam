@@ -1,0 +1,395 @@
+---
+title: "A Geographer's introduction to GAMs"
+author: "Lex Comber, Paul Harris and Chris Brunsdon"
+date: "January 2026"
+output: rmarkdown::html_vignette
+bibliography: vignette.bib
+header-includes:
+   - \usepackage{caption}
+
+vignette: >
+  %\VignetteIndexEntry{A Geographer's introduction to GAMs}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+
+---
+
+\captionsetup{width=5in}
+
+```{r, include = FALSE}
+library(knitr)
+# library(kableExtra)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  options(width = 120)
+)
+```
+
+```{r eval = F, echo = F}
+# see Chaco_Data_stgam.R
+# usethis::use_data(chaco)
+# usethis::use_data(chaco, overwrite = TRUE)
+```
+
+## Overview
+
+The `stgam` package [@stgam] provides a wrapper around `mgcv` functionality [@wood2025package] to support space-time analysis with Generalized Additive Models (GAMs), Although GAMs, as with any regression, are useful predictors of a target variable, the focus here is understanding relationships in the data and associated inference (i.e., process understanding between the target and a set of predictor variables). This is a common objective of geographical analysis, which is often concerned with how processes vary spatially, temporally and spatio-temporally.
+
+This vignette illustrates an analysis workflow using GAM smooths that quantifies and models variations over space and time. It highlights the importance of prior investigations of spatial and / or temporal variability before constructing space-time GAMs.
+
+This vignette acts as precursor, to a complementary vignette, where spatial, temporal and spatio-temporal varying coefficient GAMs are investigated. The GAMs specified here, only use surrogates for spatial or temporal effects, through location coordinates or date stamps, respectively. GAMs by design support varying coefficients but for this vignette, this variation is essentially investigated in 'attribute-space' only.
+
+You should load the `stgam` package and the `chaco` data. The data are sample of 2000 observations of Normalised Difference Vegetation Index (NDVI) of the Chaco dry rainforest in South America with some climate data. The NDVI and climate data are found via Google Earth Engine [@gorelick2017google]. The NDVI data is sourced from the PKU GIMMS NDVI v1.2 dataset, which provides NDVI observations at 1/12° spatial resolution at bi-monthly intervals from 1982 to 2022 [@li2023spatiotemporally]. For the climate data, Maximum temperature (`tmax`) in degrees C and Precipitation (`pr`) in millimetres were selected from the TerraClimate dataset (IDAHO_EPSCOR/TERRACLIMATE) and their mean value was calculated for each monthly image across all pixels.
+
+
+```{r loadpackages, warning = F, message = F, results=F}
+library(cols4all)
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+library(sf)
+library(cowplot)
+# load the package and data
+library(stgam)
+data("chaco")
+```
+
+You should examine the help for the dataset and especially the variables that `chaco` contains:
+```{r eval = F, warning = F, message = F}
+help(chaco)
+```
+
+
+## 1. Data considerations
+
+The first stage is simply to examine the data, particularly how variables many vary over space and time. The code below examines the data before undertaking some initial investigations.
+
+```{r eval = T}
+# examine what is loaded 
+chaco
+```
+
+The analyses will model NDVI (the `ndvi` variable). GAMs will be constructed that regress this target variable against available predictor variables including location and time. The print out of the first 10 records above shows that the dataset contains a time variable (`date`) in date format as well as location in metres (`X` and `Y` from the OSGB projection). It often more useful to represent time as continuous scalar values and to have location coordinates in kilometres rather than metres. The data also contains a variable called `month` to represent time (here months since the earliest date). The code below rescales the locational data, but the original coordinates are retained for mapping in `geometry` attribute of `chaco`: 
+```{r}
+chaco <- 
+  chaco |> 
+  # scale location and retain original coordinates
+  mutate(Xo = X, Yo = Y) |>
+  mutate(X = X/1000, Y = Y/1000)  
+```
+Again this can be examined:
+```{r eval = F}
+chaco
+```
+
+The target variable can be mapped as in the code snippet below. The map blow shows the spatial distribution of `ndvi`. 
+
+```{r dataplot, fig.height = 4, fig.width = 7, fig.cap = "Spatial variation of the `ndvi` variable ."}
+# map the data layers
+chaco |> 
+  ggplot() + geom_sf(aes(col = ndvi)) +
+  scale_color_viridis_c(option = "magma") +
+  theme_bw()  +xlab("") + ylab("")
+```
+
+Distributions and correlations for the continuous variables can be examined using boxplots / histograms and a correlation matrix, respectively. It is important to establish that any GAM with the proposed target, regressed against a set of predictor variables may yield something interesting and sensible, and just as importantly, to identify any variables that might be a problematic when trying to fit and interpret the resultant model.
+
+For example, evidence of a highly skewed variable or one that has outliers. This is the case for the proposed target variable (`ndvi`) which is strongly positively skewed with potential outliers.
+
+The code below generates boxplots and then density histograms.
+
+```{r databox, fig.height = 2.5, fig.width = 7, fig.cap = "Boxplots of the continous variables in the data."}
+# boxplots
+chaco |> 
+  st_drop_geometry() |>
+  select(id, ndvi, tmax, pr) |>
+  pivot_longer(-id) |>
+  ggplot(aes(x = value), fil) + 
+  geom_boxplot(fill="dodgerblue") +
+  facet_wrap(~name, scales = "free") +
+  theme_bw() +
+  theme(axis.title.y=element_blank(),
+        axis.text.y=element_blank(),
+        axis.ticks.y=element_blank())
+```
+
+```{r datahist, fig.height = 2.5, fig.width = 7, fig.cap = "Histograms of the continuous variables in the data."}
+# histograms
+chaco |> 
+  st_drop_geometry() |>
+  select(id, ndvi, tmax, pr) |>
+  pivot_longer(-id) |>
+  ggplot(aes(x = value), fil) + 
+  geom_histogram(aes(y=after_stat(density)),bins = 30, 
+                 fill="tomato", col="white") +
+  geom_density(alpha=.5, fill="#FF6666") +
+  facet_wrap(~name, scales = "free") +
+  theme_bw()
+```
+
+Examining correlations, similarly checks for issues that may be a problem later on in the analysis workflow. Here the aim is to establish that there are reasonable correlations with the target variable and at the same time, little collinearity amongst the predictor variables. Note this may change when considering change in correlations over space, time or space-time (i.e., they are only examined globally, for now). See accompanying vignette.
+
+```{r correls}
+# correlations
+chaco |>
+  st_drop_geometry() |>
+  select(ndvi, tmax, pr) |>
+  cor() |> round(3)
+```
+ 
+Finally, thinking about a GAM-based space-time analysis of *your* dataset, as a general heuristic, any dataset for use in the space-time analysis should ideally have a minimum of about 100 locations and a minimum of about 50 time intervals. You should consider this when you are assembling your data. For space-time datasets with smaller dimensions, alternative regression methods suit, say a spatial panel regression when the time component is short [@harris2017introducing]. 
+
+## 2. Detecting variability
+
+Investigations in the previous section were all concerned with establishing the viability of undertaking the proposed analysis, using standard exploratory data analyses to examine distributions and correlations. In this section, these are extended to investigate data variability over time, over space and in space-time. This is done by constructing a series of GAMs, of different forms and with different settings. Tools for constructing GAMs using the `mgcv` package [@wood2025package] are introduced but with particular focus on using GAM smooths or splines to explore variations.   
+
+### 2.1 Initial investigations with OLS and dummy variables
+
+As an initial baseline model, the code below creates a standard OLS (ordinary least squares) regression for `ndvi` with two predictors, using the `lm` function. The model fit is weak, but the model summary indicates that the all of the predictor variables (`tmax` and `pr`) are significant predictors of the target variable, `ndvi`. An analysis of variance (ANOVA), using the `anova` function, shows how much variance in `ndvi` is explained by each predictor and whether that contribution is statistically significant (via associated p-values, `Pr(>F)`). Here high values in the `F value` test statistic provides evidence that a given predictor is useful.In summary, there is evidence the two predictors (`tmax` and `pr`) are statistically significant predictors.
+
+
+```{r ols}
+# an OLS model
+m_ols <- lm(ndvi ~ tmax + pr, data = chaco)
+summary(m_ols)
+anova(m_ols)
+```
+
+As as of yet, space, time and space-time influences on house price variation have not been investigated. GAMs with smooths offer a route to investigate these.
+
+
+### 2.2 Detecting variability using GAM smooths
+
+GAMs with splines (or smooths - the terms are used interchangeably) can be used to explore and quantify spatial and temporal variations. However before considering these aspects, it is important to outline what smooths do. 
+
+Smooths help to fit a (smooth) curve through a cloud of messy data points. They generate flexible fits (curves) able to adapt to the shape of the data. Because of this, they are able to describe the relationships between variables better than a straight line. For example, consider the scatterplot of some simulated data below: it would be difficult to fit a straight line through it.   
+
+```{r simplot, fig.height = 4, fig.width = 7, fig.cap = "Simulated `x` and `y` data."}
+# create simulated data 
+set.seed(12)
+x  <- runif(500)
+mu <- sin(2 * (4 * x - 2)) + 2 * exp(-(16 ^ 2) * ((x - .5) ^ 2))
+y  <- rnorm(500, mu, .3)
+# plot x and y
+ggplot() + 
+	geom_point(aes(x,y)) +
+  theme_bw()
+```
+
+The code below uses a GAM smooth to determine the relationship between `x` and `y` without having to pre-specify any particular form (e.g. quadratic, exponential, etc). The wiggliness of the fit is determined automatically by the `s` function from the `mgcv` package. This is done in different ways depending on the type of smooth that is specified (thin plate regression smooths is the default in `s`). Effectively what the smooth does is to split the data into chunks and fit piecewise linear relationships, rather than fitting a single straight line as in a standard linear regression. In doing so, GAMs implicitly allow for non-linear relationships.
+
+```{r simgamplot, fig.height = 4, fig.width = 7, fig.cap = "Simulated `x` and `y` data with GAM a Spline fitted."}
+# a GAM illustration with a spline using s
+gam_s_example <- gam(y~s(x))
+# extract the smooth fit
+y.s <- gam_s_example$fitted.values
+# plot
+ggplot() +
+  geom_point(aes(x,y), col = "grey") +
+	geom_line(aes(x, y = y.s), lwd = 1) +
+  theme_bw()
+```
+
+Thus, this diversion into smooths and splines illustrates how they model different relationships (slopes) with `y` at different locations within the variable feature space, (the `x` axis in the above example). In this way, spline smooth curves can be used to capture non-linear relationships in attribute-space (here the relationship of `x` with `y`).
+
+Importantly, in the context of space-time varying coefficient modelling with `stgam` (see the accompanying vignette in this package), the smooth can be used to model how relationships between `x` and `y` varies with respect to time or location, if the smooth is also parameterised with those. That is moving from attribute-space to temporal- or geographical-space, respectively.
+
+### 2.3 Temporal variability
+
+It would be useful to examine the how the target variable, `ndvi`, varies over time. One way of doing this is to extend the use GAM smooths illustrated above. The code snippet below models the variation in `ndvi` but now using time (the `month` variable) as a predictor.   
+
+```{r gam.1}
+# the first GAM 
+gam.1 <- gam(ndvi~s(month), data = chaco)
+summary(gam.1)
+```
+The smooth can be investigated by plotting `ndvi` with  time. Note the use of the actual data variable `date` rather than `month` in the code below to have a friendly x-axis in the plot, and the use of the `predict` function to extract the standard errors on the fitted curve (i.e., the predictions of NDVI):
+ 
+```{r smoothplot1, fig.height = 4, fig.width = 7, fig.cap = "A plot of the temporal smooth."}
+# create a data frame with x, predicted y, standard error
+x <- chaco$date
+y <- gam.1$fitted.values
+se <- predict(gam.1, se = TRUE, chaco)$se.fit
+u <- y+se
+l <- y-se
+df <- data.frame(x, y, u, l)
+# plot!
+ggplot(df, aes(x, y, ymin = l, ymax = u)) + 
+  geom_ribbon(fill = "lightblue") + 
+  geom_line() + 
+  theme_bw() + 
+  xlab("Date") + ylab("NDVI") 
+```
+
+This exercise models variation in the relationship between `ndvi` (NDVI) and `month` (time). The code above extracts the predicted values ($\hat{y}$) of `ndvi` from the model and plots them against time, but using the actual date. The plot shows how the relationship of the target variable varies with time. This provides confirmation of the potential suitability of a temporal analysis of `ndvi`. 
+
+### 2.4 Spatial variability
+
+The spatially varying trends can be examined in similar way, again using a standard `s` spline - but now with location variables (i.e., the coordinates) to predict house price.   
+
+```{r smoothplot2, fig.height = 5, fig.width = 7, fig.cap = "A `mgcv` map of the spatial smooth."}
+# the second GAM
+gam.2 <- gam(ndvi~s(X,Y), data = chaco)
+summary(gam.2)
+plot(gam.2, asp = 1)
+```
+
+Notice that the model fit ($R^2$) has **not** increased substantially from the previous model. This suggests some important spatial effects and again the smooth can be plotted, but this time rather than a line, it is a 2-Dimensional surface. However, it would be useful to visualise this as a surface rather than just over the `chaco` point locations. The code below uses the `predict` function used to model the relationship over a hexagonal grid (a surface) covering the extent of study area, that contains `X` and `Y` attributes of the location of the hexagonal cell centroid.
+
+```{r create_lgrid}
+# create a grid object from the Chaco data
+chaco_grid <- 
+  st_make_grid(chaco, square=FALSE,n=20) |> 
+  st_sf()
+# rename the geometry, sort row names 
+st_geometry(chaco_grid) = "geometry"
+rownames(chaco_grid) <- 1:nrow(chaco_grid)
+# create and add coordinates X and Y / 1000
+coords <- chaco_grid |> st_centroid() |> st_coordinates() 
+chaco_grid <- chaco_grid |> bind_cols(coords/1000)
+```
+
+You may wish to inspect this object:
+```{r eval = F}
+chaco_grid
+plot(st_geometry(chaco_grid))
+```
+
+Before continuing with the mapping procedure:
+```{r smoothplot2a, fig.height = 5, fig.width = 7, fig.cap = "A map of the smoothed (predicted) response variable over hexagon grid."}
+# predict over the grid
+yhat <- predict(gam.2, newdata = chaco_grid)
+chaco_grid |> 
+  mutate(yhat = yhat) |>
+  # and plot
+  ggplot() + 
+  geom_sf(aes(fill = yhat), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_seq("brewer.yl_or_rd", name = "NDVI") +
+  # apply and modify plot theme
+  theme_bw() +
+  theme(legend.position = "bottom",
+        legend.key.width = unit(1, "cm"))
+```
+
+These are clear spatial trends (variations over space) of the NDVI  target variable. The map indicates high values in the centre of the study area, as in the initial map of the data earlier, and again provides confirmatory evidence that the some spatial modelling of `ndvi` is appropriate. 
+
+### 2.5 Space-time variability I
+
+The smooth approach can be extended to model the target variable in space-time by including the location and time variables in the smooth. However, a slightly different set of considerations are required because of mixing space and time in the `mgcv` smooths. Consider the code snippet below for the space-time smooths it specifies a smooth using the `te` function rather than `s` and contains other parameters in the `d` and `bs` arguments. The reasons for this are described below. 
+
+```{r gam.3}
+# the third GAM
+gam.3 <- gam(ndvi~te(X,Y,month, d = c(2,1), bs=c('tp','cr')), data = chaco)
+summary(gam.3)
+```
+
+It is important to consider the difference between `s(X,Y,month)` (which would be a continuation of the format above but has not been run) and `te(X,Y,month,d = c(2,1),bs=c('tp','cr'))` before examining the resultant GAM (`gam.3`). The spline functions `s()` and `te()` can model smooth interactions between multiple variables, but they handle dimension scaling, marginal smoothness, and basis construction in different ways. 
+
+- `s()` is an *Isotropic smooth*. It is used when all variables are on the same scale and have similar smoothness behaviours (like `X` and `Y`). By default it uses a thin plate regression spline (`bs = "tp"`) and a single basis to model the attribute space. The formulation `s(X,Y,month)` would therefore use a single basis to model a smooth in 3D space, under the assumption that all the variables (`X`, `Y` and `month`) contribute in the same way and at the same scale. This is fine if the variables are numeric, continuous, and in comparable units such as percentages. But not in space-time. 
+
+- `te()` is a *Tensor Product (TP) smooth*. These are used when variables are on different scales or represent different kinds of effects (like `X`, `Y` and `month`). It builds a smooth using separate basis functions for each variable and then combines them. The formulation `te(X,Y,month,d = c(2,1),bs=c('tp','cr'))` includes the `d` parameter that specifies the dimensions for each basis. Here a 2D basis is specified for `X` and `Y` (location) and a 1D basis for `month` (time). It also includes a basis parameter `bs` which specifies a Thin Plate Regression Spline (`tp`) for location and a Cubic Regression Spline (`cr`) for time. Thin plate splines are invariant to coordinate rotation and are ideal for spatial data (regardless of whether the coordinates are in meters, kilometres, or degrees) and Cubic regression splines are more efficient especially in 1D. The tensor product smooth is constructed by constructing (marginal) smooths for each and taking the tensor product of those to form the joint smooth. It is useful when the variables to be included in the smooth have different scales or units (e.g., `X` and `Y` are coordinates, `month` is time) and different degrees of smoothness are expected along each variable.
+
+Thus, in this case a TP smooth is specified because space and time need to be combined. The code below examines the results and uses the `mgcv` plot function to show the spatial distributions over 9 discretised time chunks (~15 months). 
+
+```{r eval = F}
+plot(gam.3, asp = 1)
+```
+
+However, it is also possible to slice and dice the time variable in other ways. The code snippet below illustrates how this can be done for monthly periods using the `calculate_vcs` function in the `stgam` package. Note that if predictor variables are included in the model then the function coefficient estimates, standard errors and t-values for each of terms specified, as shown in the accompanying vignette.
+
+However, in this case we are just interested in the predicted value of the target variable, `yhat`. The code below uses the grid object created above (`chaco_grid`) as a spatial framework to hold the prediction of the `ndvi` variable over these discrete time periods.
+```{r smoothplot3, fig.height = 6, fig.width = 7, fig.cap = "A plot of a spatial smooth over 7 approximately annual time periods."}
+# create time slices
+years <- sort(unique(chaco$year))
+# calculate over the grid for each time slice
+res_out <- matrix(nrow = nrow(chaco_grid), ncol = 0)
+for (i in 1:length(years)){
+  # convert years to months - here getting month 6
+  month.val <- ((years[i]-min(years)) * 12) + 6
+  res.i <- calculate_vcs(input_data = chaco_grid |> mutate(month = month.val),
+                         mgcv_model = gam.3,
+                         terms = NULL)
+  res_out <- cbind(res_out, res.i$yhat)
+}
+# name with years and join to the grid
+colnames(res_out) <- paste0("Y_", years)
+chaco_grid |> 
+  cbind(res_out) |>
+  # select the variables and pivot longer
+  select(-X, -Y) |>
+  pivot_longer(-geometry) |>
+  # make the new object a factor (to enforce plotting order)
+  mutate(name = factor(name, levels = paste0("Y_", years))) |>
+  # and plot 
+  ggplot() + 
+  geom_sf(aes(fill = value), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_seq("brewer.yl_or_rd", name = "Predicted\nNDVI") +
+  # facet
+  facet_wrap(~name, ncol = 4) +
+  # apply and modify plot theme
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.17), 
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank())
+```
+
+This time series of maps show that without any predictor variables (aside from location & time), the trends in `NDVI` varies spatially and changes in intensity over time (the increase and decrease in values over space), with changes in intensity but limited variation in spatial pattern over time.  
+
+
+### 2.6 Space-time variability II
+
+The formula used to construct the `gam.3` model in the previous subsection constructed a smooth that implicitly combined space and time, under an assumption that the variations in space and time of `ndvi` interact with each other. However this may not be the case. More generally, spatial and temporal dependencies might not be expected to interact in the data for a relatively small region, whose observations might be expected to be subject to the same socio-economic or environmental pressures. In this case, any space and time effects might be expected to be *independent* of each other. Whereas in a larger, for example national study, any space and time effects might be expected to *interact* more strongly.
+
+It is possible to use a different construction involving separate smooths for space and time, with the `s()` smooth, and to avoid the assumption of the interaction of space and time effects:  
+
+```{r gam.4}
+# the fourth GAM
+gam.4 <- gam(ndvi~s(X,Y) + s(month), data = chaco)
+summary(gam.4)
+```
+
+Again there is evidence of spatial and temporal trends in the data and these can be visualised using the `plot.gam` function in `mgcv` (called with just `plot`). 
+```{r smoothplot4, fig.height = 4, fig.width = 7, fig.cap = "A `mgcv` plot of the spatial and temporal smooths."}
+plot(gam.4, page = 1)
+```
+
+Note that, the space-time interactions could be generated in the same way as for the `gam.3` model above, using the location (`X` and `Y`) values in `chaco_grid` and the time slices in `years`. 
+
+### 2.7 Including other predictor variables in space-time GAMs
+
+Up until now, only the target (response) variable, `ndvi` has been examined for variations in time and space, using GAM smooths specified in different ways. This was to explore space-time variability of this variable, but also to introduce GAM smooths. The code below includes the `tmax` predictor variable in a space-time GAM as a fixed parametric term (i.e., in a similar way as in the OLS model created above).
+
+```{r gam.5}
+# the fifth GAM
+gam.5 <- gam(ndvi~s(X,Y) + s(month) + tmax, data = chaco)
+summary(gam.5)
+```
+
+The model summary indicates that `tmax` is a significant predictor of `ndvi` and improves the model fit. However, this raises a key question of how should predictor variables be included in the model: in (fixed) parametric form or in a (varying) smooth form? This is addressed in the accompanying vignette.  
+
+As before the smooths can be plotted:
+```{r eval = F}
+plot(gam.5, page = 1) 
+```
+
+### 2.8 Summary  
+
+This vignette has introduced GAMs with smooths (splines) as a way of investigating any space-time effects present in the data. The mechanics of smooths was described and illustrated, and a brief introduction to different smooth forms was provided. Variations in the target variable (`ndvi`) in time, space and space-time were explored through elementary model fitting and plotting the smooth graphical trends.
+
+In this case, effects in space and time are present in the `ndvi` target variable and it looks like there is a universal spatial trend at all times, and universal temporal trend everywhere. The final space-time GAM included a predictor variable (`tmax`) which added some explanatory power but these were not examined with respect to varying in space or in time or in space-time (i.e. through the use of smooths). This is done in the accompanying vignette.
+
+Such investigations are an important initial step. They provide evidence of space-time variations in the target variable  - i.e. whether the effects in space and time are present in the data - and can help determine which predictor variables may be of further interest. They guide subsequent analysis and avoid making assumptions about the presence of space-time interactions, for example by plugging every predictor variable into a space-time smooth of some kind. 
+
+
+## References
+
+
+

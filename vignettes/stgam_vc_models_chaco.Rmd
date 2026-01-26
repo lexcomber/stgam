@@ -1,0 +1,793 @@
+---
+title: "A Geographer's introduction to space-time regression with GAMs using `stgam`"
+author: "Lex Comber, Paul Harris and Chris Brunsdon"
+date: "January 2026"
+output: rmarkdown::html_vignette
+bibliography: vignette.bib
+header-includes:
+   - \usepackage{caption}
+
+vignette: >
+  %\VignetteIndexEntry{A Geographer's introduction to space-time regression with GAMs using `stgam`}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+
+---
+
+\captionsetup{width=5in}
+
+```{r, include = FALSE}
+library(knitr)
+library(kableExtra)
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.height = 6, fig.width = 7,
+  options(width = 120)
+)
+cache.val = TRUE
+```
+
+## Overview
+
+The previous vignette ("A geographer's introduction to GAMs") described some data considerations for space-time analysis and the importance of undertaking some explorations of the space-time variability in the data. It illustrated how this could be done using GAM smooths applied to the target variable through elementary model fitting and visualisation to guide subsequent analyses. 
+
+These are extended in this vignette by including predictor variables, constructing an initial predictive space-time GAM, undertaking investigations and model refinement, and examining and visualising the space-time varying coefficient estimates. The last section undertakes automatic model selection. 
+
+## 1. Data and variables
+
+The code below loads some packages and data, and then manipulates the data to create some variables as in the previous vignette:
+
+```{r loadpackages, warning = F, message = F, results=F}
+library(cols4all)
+library(cowplot)
+library(dplyr)
+library(ggplot2)
+library(gratia)
+library(sf)
+library(tidyr)
+library(mgcv)
+# load the package and data
+library(stgam)
+data("chaco")
+chaco <- 
+  chaco |> 
+  # scale location and retain original coordinates
+  mutate(Xo = X, Yo = Y) |>
+  mutate(X = X/1000, Y = Y/1000)  
+```
+
+The `chaco` data is a spatial object in `sf` format. It contains a 2 potential predictor variables that could be used to model `ndvi`: `tmax` (Maximum temperature) and `pr` (Precipitation), as well as location (`X` and `Y`) from the rescaled Easting and Northing coordinates, and time (`months`). It is fully described in the Introductory vignette. ("A Geographer's introduction to GAMs"). The data can be examined:
+
+```{r}
+head(chaco)
+```
+
+## 2. Space-time GAM contruction and considertations
+
+### 2.1 Overview
+
+This section works through an example of constructing a space-time GAM to illustrate a workflow that allows for spatio-temporally varying terms, using the Chaco dataset. It fits an initial complex model and then, through investigation of the results, refines the how the model is specified. In so doing a number of important considerations are illustrated relating the bases that are specified, their dimensions, the GAM fitting method, the model family and the number of knots used in the smooths.     
+
+In the GAMs created in this vignette and this package, the Intercept is treated as an explicitly addressable term. By way of example, consider the model `m` created below:
+```{r eval = F}
+m  <- gam(ndvi~s(X,Y) + s(month) + pr, data = chaco)
+summary(m)
+```
+
+This includes the terms `s(X,Y) + s(month)`. These model the spatially varying and temporally varying Intercept plus error. Note that if this was a spatial model (without time), then just `s(X,Y)` would be included for the Intercept and similarly just `s(month)` for a purely temporal model.  
+
+The model can be reformulated as follows with an addressable Intercept term: 
+```{r new}
+m <- gam(ndvi ~ 
+           0 + Intercept + s(X,Y,by=Intercept) + s(month, by=Intercept) + 
+           pr,
+         data = chaco |> mutate(Intercept = 1))
+summary(m)
+```
+
+The model summary now includes `Intercept` as a parametric term (rather than `(Intercept)`) with `s(X,Y):Intercept` and `s(month):Intercept` as smooth terms, rather than `s(X,Y) `and `s(month)`, but the values in both model summaries are all the same. 
+
+The rationale for this is because in  varying coefficient modelling it often desirable to treat the Intercept as an explicitly addressable term [@harris2019simulation]. Specifying a varying intercept over space and or time detects situations when the response variable (the $y$-value) may show notably low or high values in a space-time locality that were not accounted for by variation in the explanatory values. This could be caused, for example, if variables not recorded in the study were causing otherwise unexplained space-time patterns in the $y$ variable. As such, a varying intercept commonly tends to capture autocorrelated errors [@harris2019simulation] and background variation that has the potential to affect other varying coefficient estimates. It also simplifies the interpretation of other varying coefficient estimates, particularly if the predictor variables are not mean-centred.
+
+The models in this vignette include the Intercept as an addressable term and the code below creates this variable in the input data:
+```{r data_prep}
+chaco <- 
+  chaco |> 
+  mutate(Intercept = 1)
+```
+
+### 2.2 Space-time GAMs
+
+An initial space-time GAM is fitted using the code below. Notice that for each predictor variable and the explicitly specified intercept, the model specifies Tensor Product (TP) smooths to capture the variations in NDVI (`ndvi`) in both space and time simultaneously. These are tensor product smooths, specified using the `te()` function, and are described below. Notice also that global *parametric* parameters are also specified for `tmax`, `pr` and `Intercept`. This is to provide a multiplicative constant as well as a function around the coefficient term, and potentially an offset term.   
+```{r m1, eval = T, echo = T, cache = cache.val}
+# initial model
+m1 <- gam(
+  ndvi ~ 0 +
+    Intercept + te(X,Y,month, by=Intercept,bs = c("tp", "cr"), d = c(2,1)) + 
+    tmax + te(X,Y,month, by = tmax, bs = c("tp", "cr"), d = c(2,1)) +
+    pr + te(X,Y,month, by = pr, bs = c("tp", "cr"), d = c(2,1)),
+  data = chaco,
+  method = "REML",
+  family = gaussian()
+)
+```
+
+Each of the space-time smooths is specified with Tensor Product (TP) smooth (`te()`) to model interactions between space and time margins. These construct smooth surfaces over space and time without random effects [@wood2025package]. They enable variables that are measured over different scales (i.e. that are anisotropic), such as location coordinates and time, to be combined. The basis dimensions of each component are specified through the `d` parameter, here specifying a 2-dimensional smooth basis for location (`X` and `Y`) and a 1-dimensional one for time (`month`). These are combined via the TPs. Thin plate regression splines (`tp`) were specified to model location and low-rank cubic regression splines (`cr`) were specified for time. Thin plate regression splines are ideal for 2-D smooths because they are isotropic (they are *rotation invariant* with have no directional bias) and they perform well even if the observations are irregularly located over space. Cubic regression splines are efficient in 1-D and known to be good for seasonal or long-term effects. The low-rank basis avoids overfitting and improves computational efficiency. 
+Finally, the model is specified with a Gaussian family and the model is fitted using a REML (Relaxed Maximum Likelihood) method. Model estimation in GAMs can be conducted in two ways: (a) predictive (i.e., out-of-sample minimization) via Generalized Cross-Validation (GCV) and (b) Bayesian (i.e. attach priors on basis coefficients) via some maximum likelihood approach. These tend to provide more stable estimates of the smoothing parameters (i.e., reduce over-fitting) and tend to provide more robust estimates of the variance. GCV is more computationally efficient but can over-fit, especially when errors are correlated. Note that GCV is set as the default in `mgcv`, but REML based approaches are preferred because they provide less biased estimates of variance and smoothing parameters, and are more robust during the optimization process. 
+
+The model can be examined using the `appraise` function in the `gratia` package [@simpson2024gratia; @simpson2025package] which generates diagnostic plots of the model residuals (the difference between the observed value of $y$ (in this case `ndvi`) and the predicted value of $y$, also referred to as $\hat{y}$ : 
+
+```{r appm1, eval = T, echo = T, cache = cache.val, fig.cap = "Diagnostic plots of `m1`."}
+appraise(m1, method = "simulate")
+```
+
+The diagnostic plots show that the top and bottom and of the QQ plot are close to the theoretical fit line and that the modelled quantiles are close to the theoretical one. This indicates that there are a low number of residuals - observed quantiles that are not on the theoretical fit line. If there were a high number - i.e. the QQ plot had an S-shape - then this would suggest residual heterogeneity, potentially due to un-modelled interactions or due to an inappropriate assumption of a Gaussian model. In such cases other response should be investigated for example through histograms and specified accordingly via the `family` parameter that is passed to the GAM - see below. 
+
+### 2.2 Space-time GAM Refinements I: Model family
+
+The assumptions behind a Gaussian model are that the target variable is normally distributed, meaning that it is continuous, has constant variance and is unbounded (i.e. it can theoretically take any value from $-\propto$ to $+\propto$). 
+
+If the target variable has a non-normal distribution (a long tail, a skewed distribution, etc) then a different model family should be specified. For example, a target variable such as house price which has values that cannot be negative and may have some very high values, would suggest specifying a a Gamma family with a log link. This is used when the response is continuous, strictly positive, right-skewed (i.e., with a long tail to the right)	and when the variance increases with the mean (i.e. is heteroscedastic). What this effectively does to provide a log-scale regression for positive, skewed data.
+
+The point is that there are a number options for specifying the model `family` in a `mgcv` GAM, depending on the distribution of the response variable, as summarised in the table below. Further information can also be found in the help for the `family` function (enter `?family`).    
+
+```{r echo = F, eval = T}
+tab <- data.frame(
+  Family = c("Gaussian", "Gamma", "Inverse Gaussian", "Poisson", "Binomial"),
+  Response = c("continuous, symmetric",
+               "continuous, positive, skewed",
+               "continuous, positive, heavy-tailed",
+               "count data",
+               "0–1 or proportion data"),
+  Link = c("identity", "log", "log", "log", "logit"),
+  Example = c("residuals roughly normal",
+              "costs, durations, prices",
+              "reaction times, dispersions",
+              "integer counts",
+              "success/failure outcomes")
+)
+
+kable(tab,  
+       booktabs = T, row.names = F, linesep = "", 
+      caption = paste0("\\label{tab:tab1}Common families and their properties."))  |>
+  kable_styling(latex_options = "hold_position") 
+```
+
+This vignette and the current version of the `stgam` package considers only a Gaussian, normally distributed response. Future versions will address other responses.   
+
+### 2.3 Space-time GAM Refinement II: Effect size
+
+Having determined that correct model family has been specified for the response variable, the model summary can be examined:
+```{r}
+summary(m1)
+```
+This indicates that `pr` specified in a space-time smooth is not significant but that all of the other model components are.  
+
+To unpick this further and to provide a further basis for model evaluation, it is also instructive to examine the size of the effect of each model component. The code below generates numeric summaries of the effects of each smooth by extracting the effect of each term from the model using the `predict` function. The typical size of each smooth's contribution to predictions are summarised from their standard deviations (`sd`) and the total amplitude of the smooth effects (`range`), where higher values indicate a larger effect on the target variable. This is undertaken below and the code snippets have been wrapped into the `effect_size` function in `stgam`.    
+```{r}
+# extract the terms 
+f1 <- predict(m1, type = "terms")
+# generate numeric summaries  
+apply(f1, 2, function(v) c(sd = sd(v), range = diff(range(v)))) |> round(3)
+```
+
+This shows the size of the effect of each model component. Considering the ranges, we can see the zero effect of the parametric `Intercept` and `pr` term and the low partial effect of the TP smooth for the `pr` term, suggesting a lack of interaction over space-time for this this predictor variable. A possible refinement in this case could be to remove the fixed `Intercept` and `pr` terms but we would like to retain them as constants and offsets. The range value of the combined space-time smooth for `pr` is relatively low (`te(X,Y,month):pr`) and it may be useful to examine `pr` over space and time separately. In the code below the individual space and time smooths are specified as thin plate regression smooths, in `s()` function in the `mgcv` package. 
+
+```{r m2, eval = T, echo = T, cache = cache.val}
+# second model with separate space-time effects for pr
+m2 <- gam(
+  ndvi ~ 0 +
+    Intercept + te(X,Y,month, by=Intercept, bs = c("tp", "cr"), d = c(2,1)) + 
+    tmax + te(X,Y,month, by = tmax, bs = c("tp", "cr"), d = c(2,1)) +
+    pr + s(X,Y, by = pr) + s(month, by = pr),
+  data = chaco,
+  method = "REML",
+  family = gaussian()
+)
+```
+
+Then effect size can be examined using the `effect_size` function: 
+```{r}
+effect_size(m2)
+```
+
+Now the size of the effect of `pr` is split and is larger over both space (`tmax s(X,Y):pr`) and time (`s(month):pr`), compared to the `m1` GAM model. This demonstrate how evaluating and comparing models with different space-time smooths can help to determine whether to model them interactively or not, and what the changes in the magnitude of the modelled response surface might be. 
+
+### 2.4 Space-time GAM Refinement III: `k` the number of knots
+
+In the `mgcv` GAM implementation the number of knots in each smooth are automatically determined. These control how 'wiggly' (non-linear) the the smooth can be. The number of knots in each smooth can be examined using the `gam.check` function. This provides some diagnostic information summarising the model fitting procedures can also be generated and also prints out some diagnostic plots (although not as informative as the ones created by the `appraise` function in the `gratia` R package).
+
+```{r eval = F, echo = T}
+gam.check(m2)
+```
+
+This checks whether the number of knots used in the smooths are too low. This is indicated when the effective degrees of freedom (EDF in the `edf` column) are close to the number of knots (`k`) and some of the `k-index` value are somewhat less than 1. In this case, the number of knots used in the temporal smooth for `pr` may be too low.
+
+The number of knots in a used in a smooth are automatically determined but can be specified. In `mgcv` GAM smooths, `k` controls the basis dimension of the smooth term — i.e. the maximum possible complexity of the smooth, not the actual complexity. The effective degrees of freedom (`edf`) after fitting should be much smaller. If `k` is too small, the model fails to capture the true pattern of the relationships in the data (i.e. it fails to capture non-linearities) and can result in biased fits and residual structure. There are some approximate guides for specifying `k` that are summarised in the table below. 
+
+```{r eval = T, echo = F}
+tab <- data.frame(
+  `Smooth type` = c(
+    "1D temporal smooth (e.g., days, years)",
+    "2D spatial smooth (e.g., te(X, Y))",
+    "3D space–time smooth (e.g., te(X, Y, time))",
+    "Factor-by smooths (e.g., by = region)"
+  ),
+  `Heuristic` = c(
+    "`k` ≈ min(n/10, 20–40)",
+    "`k` ≈ 50–200 total basis functions",
+    "`k` = product of marginal bases, e.g. `k = c(50, 20)`",
+    "`k` ≈ same as main smooth per level"
+  ),
+  Notes = c(
+    "Typically start around 10 basis functions; if long time series (> 1000 points), may go to 50–100",
+    "Typically start around 50 basis functions; choose higher if data cover large/complex region",
+    "mgcv handles tensor product decomposition; but do not let any single dimension be too small",
+    "You can use fewer if levels are many and data per level small"
+  ),
+  check.names = FALSE
+)
+
+kable(tab,  
+       booktabs = T, row.names = F, linesep = "", 
+      caption = paste0("\\label{tab:tab2}Heuristics for choosing `k` in common smooth types."))  |>
+  kable_styling(latex_options = "hold_position") 
+
+```
+
+As a general rule of thumb, the `k` value should be doubled if the check reveals it to be too low. This is done for the temporal smooth specified for `pr` in the code below to create `m3` and note that as `k` increases so does the time to fit the model:
+
+```{r m3, eval = T, echo = T, cache = cache.val}
+# third model with increased k for the pr temporal smooth
+m3 <- gam(
+  ndvi ~ 0 +
+    Intercept + te(X,Y,month, by=Intercept, bs = c("tp", "cr"), d = c(2,1)) + 
+    tmax + te(X,Y,month, by = tmax, bs = c("tp", "cr"), d = c(2,1)) +
+    pr + s(X,Y, by = pr) + s(month, k=20, by = pr),
+  data = chaco,
+  method = "REML",
+  family = gaussian()
+)
+```
+The `gam.check` function calls the `k.check` function, provides some interpretation notes and diagnostic plots. However, the `k.check` function can be called directly:  
+```{r eval = T, echo = T}
+# check the model smooths
+k.check(m3)
+```
+
+This shows some improvement, with the EDF now increased but still close to `k` for the smooth and the `k-index` still much lower than 1. The model below tries to improve the fit by increasing `k` once more:
+```{r m4, eval = T, echo = T, cache = cache.val}
+# fourth model with increased k for the pr temporal smooth
+m4 <- gam(
+  ndvi ~ 0 +
+    Intercept + te(X,Y,month, by=Intercept, bs = c("tp", "cr"), d = c(2,1)) + 
+    tmax + te(X,Y,month, by = tmax, bs = c("tp", "cr"), d = c(2,1)) +
+    pr + s(X,Y, by = pr) + s(month, k=40, by = pr),
+  data = chaco,
+  method = "REML",
+  family = gaussian()
+)
+# check the model smooths
+k.check(m4)
+```
+Again some improvement is shown but this can be nudged further: 
+```{r m5, eval = T, echo = T, cache = cache.val}
+# fifth model with increased k for the pr temporal smooth
+m5 <- gam(
+  ndvi ~ 0 +
+    Intercept + te(X,Y,month, by=Intercept, bs = c("tp", "cr"), d = c(2,1)) + 
+    tmax + te(X,Y,month, by = tmax, bs = c("tp", "cr"), d = c(2,1)) +
+    pr + s(X,Y, by = pr) + s(month, k=80, by = pr),
+  data = chaco,
+  method = "REML",
+  family = gaussian()
+)
+# check the model smooths
+k.check(m5)
+```
+
+Some further improvement is evident but this process of increasing `k` should continue. However, the number of knots cannot be increased infinitely due the data observations, the number of terms in the model and how they combine to determine the effective degrees of freedom (`edf`). The code below increases the number of knots by 40 as in this case there are only 120 unique values for months.
+```{r m6, eval = T, echo = T, cache = cache.val}
+# sixth model with increased k for the pr temporal smooth
+m6 <- gam(
+  ndvi ~ 0 +
+    Intercept + te(X,Y,month, by=Intercept, bs = c("tp", "cr"), d = c(2,1)) + 
+    tmax + te(X,Y,month, by = tmax, bs = c("tp", "cr"), d = c(2,1)) +
+    pr + s(X,Y, by = pr) + s(month, k=120, by = pr),
+  data = chaco,
+  method = "REML",
+  family = gaussian()
+)
+# check the model smooths
+k.check(m6)
+```
+
+In this case the check shows that there is sufficiently a large difference between `k` (120) and `edf` (~80) and the `k-index` is closer to 1 (0.84). The final model can be examined the usual way:
+```{r eval = F}
+appraise(m6, method = "simulate")
+```
+
+The effects of the terms can be examined as before:
+```{r}
+effect_size(m6)
+```
+
+The refined model above, `m6`, shows improvement, with the effect of `pr` over time relatively high (`s(month):pr`). Its effect over over space (`s(X,Y):pr`) is relatively low and potentially the spatial smooth for `pr` could be dropped. Some confirmation for this decision is provided when the module summary is examined: 
+
+```{r eval = T}
+summary(m6)
+```
+
+However in this case, the `m6` model is retained as the final model as the effect sizes are relatively strong for both components. It specifies a space-time TP smooth for the Intercept and for `tmax`, and separate spatial and temporal smooth for `pr`. All of the parametric terms are retained: 
+
+The size of the effects can be examined and compared with the original model `m1`:   
+```{r}
+# original model
+effect_size(m1)
+# tuned model  
+effect_size(m6)
+```
+
+The ranges of the final model (`m6`) still indicate the strong space-time interaction of NDVI with the `tmax` in the TP smooth (`te(X,Y,month):tmax`) and the interactions of `pr` in separate space and time smooths (`s(X,Y):pr` and `s(month):pr)`).
+
+The AICs of the 2 models can be compared and the final model shows a dramatic improvement (i.e. reduction in value) from the original: 
+```{r}
+# AIC comparison
+m1$aic; m6$aic
+```
+
+### 2.5. Extracting, summarising and plotting the coefficients 
+
+The spatially and temporally varying coefficients estimates generated by the model can be extracted in a number of different ways using the `calulate_vcs` function in the  `stgam` package. There are basically 2 options for generating the varying coefficient estimates: i) over the original data points or ii) over spatial surfaces for specific time slices. 
+
+For the first option, the original data, the GAM and a vector of the model terms (i.e. predictor variables names) are simply passed to the `calculate_vcs` function. The second option requires slices of the space-time data to be passed to the `calculate_vcs` function and a bit more work to process the results. In both cases the results can be summarised and mapped.
+
+Considering first the original observations:
+
+```{r vcs, eval = T, echo = T, cache = cache.val}
+vcs <- calculate_vcs(input_data = chaco,
+                     mgcv_model = m6, 
+                     terms = c("Intercept", "tmax", "pr"))
+```
+
+A summary over space and time of the coefficient estimates shows that the Intercept is large and varying and that `tmax` and `pr` also have varying relationships with the target variable over space and time, with negative and positive values in some places and / or at some times. Their values reflect the association of degrees Centigrade and millimetres of rainfall. Considering the mean values, each additional 1 degree of `tmax` is associated with a 0.0222 decrease in NDVI (biomass), and each additional millimetre of rainfall is associated with a 0.0013 increase in NDVI. 
+
+```{r, warning=F, message=FALSE}
+vcs |> 
+  # drop the geometry if the object is spatial
+  st_drop_geometry() |>
+  select(starts_with("b_")) |>
+  apply(2, summary) |> 
+  round(4)
+```
+
+These can be explicitly examined over time and notice the increasingly positive relationship with NDVI over time with the Intercept and the increasingly negative relationship of Maximum temperature. There is much more variation in the temporal trend of the relationship between NDVI and Precipitation. 
+
+```{r, final_time, fig.height = 3, fig.width = 7, fig.cap = "The variations over time of the final model coefficient estimates."}
+vcs |> 
+  st_drop_geometry() |>
+  select(date, starts_with("b_")) |> 
+  rename(`Intercept` = b_Intercept,
+         `Max Temperature` = b_tmax,
+         `Precipitation` = b_pr) |>
+  pivot_longer(-date) |>
+  group_by(date, name) |>
+  summarise(
+    lower = quantile(value, 0.25),
+    median = median(value),
+    upper = quantile(value, 0.75)
+  ) |>
+  ggplot(aes(x = date, y = median)) +
+  geom_point(col = "blue", alpha = 0.2) +
+  geom_smooth() +
+  facet_wrap(~name, scale = "free_y") +
+  theme_bw() + xlab("") + ylab("") +
+  theme(strip.background = element_rect(fill="white"))
+
+```
+
+Standard `ggplot` approaches can be used to map the coefficient estimates as in the figure below, which summarises the coefficient estimates for `pr` (`b_pr`) by year. The code uses the `year` variable to facets the maps of the spatially varying coefficients. Notice the increasingly negative relationship of Maximum temperature with NDVI over time, with a distinct South West (low) to North East (high) gradient.
+
+```{r svccoefs, fig.height = 6, fig.width = 7, fig.cap = "The varying `tmax` (Maximum temperature) coefficient estimates over space and time."}
+# title
+tit <-expression(paste(""*beta[`tmax`]*"")) 
+# plot 
+ggplot()  + 
+  geom_sf(data = vcs, aes(col = b_tmax)) + 
+  scale_colour_continuous_c4a_div(palette="brewer.rd_yl_bu",name = tit) + 
+  facet_wrap(~year) + 
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.17), 
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank())  
+```
+
+A second approach is to estimate the varying coefficients over a grid. The code below creates the `chaco_grid` spatial object, in the same way as was done in the introductory vignette, but this time also adding dummy variables:
+
+```{r create_lgrid, warning=FALSE, message=FALSE}
+# create a grid object from the Chaco data
+chaco_grid <- 
+  st_make_grid(chaco, square=FALSE,n=20) |> 
+  st_sf()
+# rename the geometry, sort row names 
+st_geometry(chaco_grid) = "geometry"
+rownames(chaco_grid) <- 1:nrow(chaco_grid)
+# create and add coordinates X and Y / 1000
+coords <- chaco_grid |> st_centroid() |> st_coordinates() 
+chaco_grid <- chaco_grid |> bind_cols(coords/1000)
+# add dummy variables to the grid 
+chaco_grid <- 
+  chaco_grid |> 
+  mutate(Intercept =  NA_real_, 
+         tmax = NA_real_,
+         pr = NA_real_)
+```
+
+You may wish to inspect this object and what it contains :
+```{r eval = F}
+chaco_grid
+plot(st_geometry(chaco_grid))
+```
+
+In order to generate annual gridded estimates of the coefficients over grid space, the model passed to the `calculate_vcs` function requires the space and time inputs that were used in the model: `X`, `Y` and `month`. The `chaco_grid` object has locational attributes but the  temporal attributes need to be created. The `for` loop below does this, extracts the coefficient estimates for the specified month - here the sixth month in each year - and then combines them. 
+
+```{r svccoefs2, eval = T, echo = T, cache = cache.val}
+# create time slices
+years <- sort(unique(vcs$year))
+# calculate over the grid for each time slice
+res_out <- matrix(nrow = nrow(chaco_grid), ncol = 0)
+for (i in 1:length(years)){
+  # convert years to months - here getting month 6
+  month.val <- ((years[i]-min(years)) * 12) + 6
+  res.i <- calculate_vcs(input_data = chaco_grid |> mutate(month = month.val),
+                         mgcv_model = m6,
+                         terms = c("Intercept", "tmax", "pr"))
+  # select all the coefficient estimates 
+  res.i <- 
+    res.i |> 
+    st_drop_geometry() |> 
+    select(starts_with("b_"), 
+           starts_with("se_"),
+           starts_with("t_")) 
+  # rename coefficients estimates
+  names(res.i) <- paste0(names(res.i), "_", years[i])
+  # bind to the result
+  res_out <- cbind(res_out, res.i)
+  cat(years[i], "\t")
+}
+```
+
+The result can be joined to the grid and mapped. The code below does this for `tmax` (Maximum temperature) as this has space-time TP smooth. The maps describe the variations over time and space of the relationship between the `tmax` predictor variable and `ndvi`. The maps indicate the increasingly negative relationship over time and the South West to North East gradient as before.  
+
+```{r svccoefs3, cache = cache.val,  fig.height = 6, fig.width = 7, fig.cap = "The varying `tmax` (Maximum temperature) coefficient estimates over space and time and the grid surface."}
+# join to the grid
+chaco_grid |> 
+  cbind(res_out) |>
+  # select the variables and pivot longer
+  select(starts_with("b_tmax")) |> 
+  # rename and select with transmute
+  transmute(`2012` = b_tmax_2012, `2013` = b_tmax_2013,
+            `2014` = b_tmax_2014, `2015` = b_tmax_2015,
+            `2016` = b_tmax_2016, `2017` = b_tmax_2017,
+            `2018` = b_tmax_2018, `2019` = b_tmax_2019,
+            `2020` = b_tmax_2020, `2021` = b_tmax_2021,
+            `2022` = b_tmax_2022
+            ) |>  
+  pivot_longer(-geometry) |>
+  # make the new time object a factor (to enforce plotting order)
+  mutate(name = factor(name, levels = years)) |>
+  # 4. and plot 
+  ggplot() + 
+  geom_sf(aes(fill = value), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_div("brewer.rd_yl_bu", name = tit) +
+  # facet
+  facet_wrap(~name, ncol = 4) +
+  # apply and modify plot theme
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.17), 
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank()) 
+```
+
+### 2.6 Summary 
+
+The above subsections describes a sequence of model construction, investigation and refinement, which, after specifying an initial Gaussian model that incorporated space-time smooths for each predictor variable, required a number of GAM-related considerations to be expanded upon. 
+
+- The initial model used Tensor Product smooths, under an assumption of space-time interactions, rather than separate space and time effects. These required the basis dimensions of each component to be specified (through the `d` parameter), here specifying a 2-dimensional basis for location and a 1-dimensional one for time). 
+- Additionally thin plate regression smooths (`tp`) were used to model location because they are isotropic with no directional bias) and can handle irregularly located observations. Cubic regression smooths (`cr`) were used to model time effects because there known to be good at handling seasonal or long-term effects. 
+- The model was fitted using REML as this tends to provide more stable estimates of the smoothing parameters and robust estimates of the variance. However, model diagnostic investigations suggested residual heterogeneity, potentially due to the incorrect assumption of a Gaussian response. 
+- A sequence of refinements were then undertaken and a number of considerations to be discussed: different model families and when they should be used, quantifying the magnitude of the effect size of the model terms, and checking and adjusting the knots used in model fitting procedure in order to determine the final model form. 
+
+In this case, the final model specified was Gaussian with a combined space-time TP smooth for `tmax` and a spatial smooth for `pr` with the number of knots set to 120. 
+
+So although statistical practice tends towards fitting the more complex model, penalizing the estimated effects and then evaluating the magnitude of those estimated effects, as was done here, it also suggests that there may be some benefit in undertaking some kind of automatic model selection (see Section 3). 
+
+## 3. Working with `stgam`: model selection
+
+The models constructed in Section 2 started with an initial model that was gradually refined through a series of investigations. Each predictor variable and the Intercept was modelled a parametric term with combined space-time smooths in the initial `m1` model. After investigation and refinement the `tmax` predictor variable was included in parametric form and within a space-time TP smooth and `pr` in a temporal smooth with the number of knots specified ($k = 120$). 
+
+This poses the question of which model form to use? How can the model best be specified? A key focus of the `stgam` package is to answer this question by creating and evaluating multiple models. 
+
+### 3.1 Using AIC to evaluate models
+
+One way to evaluate models is to compare them using some metric. Commonly AIC [@akaike1998information] is used to compare models. It is an estimator of the leave-one-out cross validated prediction error and provides a parsimonious measure of model fit that balances model complexity and prediction accuracy. Using AIC to evaluate different models therefore identifies the model with the lowest prediction error.
+
+The code below extracts the AIC from each of the models specified in the last section and prints them out in order. Here it can be seen that the `m6` model has the lowest prediction error (lowest AIC), with `pr` specified in separate space and time smooths. 
+
+```{r}
+data.frame(Model = paste0("m", c(1:6)),
+           AIC = c(m1$aic, m2$aic, m3$aic, m4$aic, m5$aic, m6$aic)) |> 
+  # rank the models 
+  arrange(AIC)
+```
+
+### 3.2 Model selection: determining GAM form 
+
+Given the the model investigation and refinement in the previous section and the model evaluations by AIC above, one option to determining model form is to create a series of models and identify the one with the best fit through AIC, given the caveats described above. 
+
+For a space-time GAM each predictor variable could be specified in one of 6 ways:
+
+i. It is omitted.
+ii. It is included as a parametric response with no smooth.
+iii. It is included in parametric form and in a spatial smooth with location.
+iv. It is included in parametric form and in a temporal smooth with time.
+v. It is included in parametric form and in a single space-time smooth.
+vi. It is included in parametric form and in 2 separate space and time smooths.
+
+The intercept can be treated similarly, but without it being absent (i.e. 5 options). Obviously there are 3 options for each predictor variable in a spatial model (i., ii. and iii.) and in a temporal model (i., ii. and iv.), with each having 2 options for the intercept. Thus for purely spatial or temporal regressions, with $k$ predictor variables, there are $2 \times 3^k$ potential models to evaluate. For a space-time there are $5 \times 6^k$ potential models. 
+
+Recall that the `chaco` dataset contains two numeric variables that could be of use in explaining the space-time variations in the `ndvi` target variable, well as location (`X` and `Y`) and time (`month`)
+
+```{r}
+chaco |> st_drop_geometry() |> head()
+```
+
+Thus with $k = 2$ variables could are 180 potential space-time  models to evaluate and 18 potential models in a spatial or temporal case study. The example below uses these 2 predictor variables evaluate 180 potential space-time models. This is done via the `evaluate_models()` function in the `stgam` package. This constructs and compares the full set of potential models, each specifying each predictor variable and the intercept in a different way. The separate space and time smooths  are specified as thin plate regression smooths using the `s()` function in `mgcv` and the combined space-time smooths are specified as Tensor Product (TP) smooths (`te()`) with a 2D thin plate smooth for location and 1D cubic regression smooth for time as in Section 2.2. 
+
+The function also includes two optional logical parameters for adjusting the number of knots specified in each smooth. The first is `k_set`. This allows the user to specify `k` in the smooths via the `spatial_k` and `temporal_k` parameters. These applied to the thin plate spline spatial and temporal smooths individually, and combined in the TP smooths. The second is `k_increase` This checks on the number of knots specified in each smooth generated by the `gam` function relative to the effective degrees of freedom, as in the outputs of the `k.check` function above. If the `increase_k` parameter is set to `TRUE`, then a threshold of the ratio of the number of knots in each smooth to its EDF can be specified via the `k2edf_ratio` parameter and if any smooth has a *knots-to-EDF* ratio less than this value (i.e. the number of knots is close to the EDF), then the knots are iteratively increased until the threshold check is passed, the number knots passes the maximum degrees of freedom (as in the worked example in Section 2.4 above), or the number of iterations (`max_iter`) is reached. The the default is that they are doubled on each iteration, but this too can be changed via the `k_multiplier` parameter. If the knots do not need to be increased, the ones generated in the fitting of the GAM by the `mgcv` package are retained. The example below applies the second of these, `k_increase`. 
+
+Each model is evaluated via its AIC value. AIC [@akaike1998information] provides an estimate of the leave-one-out cross-validated prediction error and the model with lowest AIC can be selected. 
+
+The code below specifies a spatially and temporally varying coefficient model (STVC) using the `tmax` and `pr` variables determine  a space-time regression mode. Note that the function specifies `ncores` to be set to 2 by default. This is to pass CRAN diagnostic checks for package submission - you may want to specify more using `detectCores()-1` from the `parallel` package. Note also that the input data needs to be a `data.frame` or `tibble` object and it needs to have a defined Intercept term. This can be created in the following way `input_data |> mutate(Intercept = 1)`, as was done at the end of Section 1 for `chaco`.
+
+```{r eval_stvc, eval = F, cache = cache.val, warning=F, message=F}
+library(doParallel)
+# ncores <- detectCores()-1
+t1 <- Sys.time()
+stvc_mods <- evaluate_models(
+  input_data = chaco |> st_drop_geometry(),
+  target_var = "ndvi", 
+  family = "gaussian()",
+  vars = c("tmax", "pr"),
+  coords_x = "X", 
+  coords_y = "Y", 
+  VC_type = "STVC", 
+  time_var = "month",
+  k_set = FALSE,
+  spatial_k = NULL, 
+  temporal_k = NULL,
+  k_increase = TRUE,
+  k2edf_ratio = 1.5, 
+  k_multiplier = 2, 
+  max_iter = 10,
+  ncores = 15
+) 
+Sys.time() - t1  # about 29 minutes on M4 Mac with 64GB of RAM
+```
+
+```{r echo = F, eval = T}
+# precomputed to get through CRAN checks
+# save(stvc_mods, file = "stvc_mods.RData")
+load("stvc_mods.RData")
+```
+
+The best $n$ models can be extracted (i.e. those with the lowest AIC score) using the `gam_model_rank()` function. The result of doing this is shown below. Interestingly few of the smooths in the top 10 models contain combined space-time TP smooths (`te(ST)`), indicating a lack of interaction between spatial and temporal effects. The separate spatial  (`s(S)`) and temporal (`s(T)`) smooths for the Intercept have had $k$ increased as have the spatial smooths for for `tmax` and `pr`. Also note that the top 3 models variously specify similar spatial smooths or spatial plus temporal smooths for each of the predictor variables and the similarity of the AIC values. Overall this suggests that while there are spatial and temporal dependencies with the target variable, these are not interacting over space-time.
+
+```{r}
+mod_comp <- gam_model_rank(stvc_mods, n = 10)
+# have a look
+mod_comp |> select(-c(f, ks)) 
+```
+
+
+### 3.3 The 'best' model 
+
+The highest ranked model can be specified for use in analysis. This includes the Intercept in separate space-time smooths and spatial smooths for `tmax` and `pr`. The formula can be extracted and  inspected:
+
+```{r}
+f <- as.formula(mod_comp$f[1])
+f
+```
+
+The formula can be used to specify a `mgcv` GAM using a REML approach. The resulting model is checked for over-fitting using the `k.check` function in the`mgcv` package. Here the `k-index` values are near to 1, the `k'` and , except for the temporal smooth for the Intercept the `edf` the `edf` values are all much less than the `k'` values, so this model is reasonably well tuned. 
+
+```{r final_mod, cache = cache.val}
+# specify the model
+gam.m <- gam(f, data = chaco, method = "REML")
+# check k
+k.check(gam.m)
+```
+
+A summary of the model can be examined and this shows that of the parametric terms only the `Intercept` is significant as all fo the spatial and temporal smooths. 
+
+```{r}
+summary(gam.m)
+```
+
+
+
+### 3.4 Plot and map the results
+
+The varying coefficient estimates can be extracted, examined, plotted and mapped as before using the code below. There are no temporal smooths specified in the model for the for the predictor variables `tmax` and `pr` and perhaps unsurprisingly the general trends of coefficient estimates and the relationships with NDVI are over time that they describe, are relatively consistent. 
+
+```{r final_time2, eval = T, echo = T, message = F, warning=F, fig.height = 3, fig.width = 7}
+# extract the VCs
+vcs <- calculate_vcs(input_data = chaco,
+                     mgcv_model = gam.m, 
+                     terms = c("Intercept", "tmax", "pr"))
+# examine
+vcs |> 
+  # drop the geometry if the object is spatial
+  st_drop_geometry() |>
+  select(starts_with("b_")) |>
+  apply(2, summary) |> 
+  round(5)
+```
+
+```{r plot_final_time2, eval = T, echo = T, message = F, warning=F, fig.height = 3, fig.width = 7, fig.cap = "The variations over time of the model coefficient estimates."}
+
+# plot over time
+vcs |> 
+  st_drop_geometry() |>
+  select(date, starts_with("b_")) |> 
+  rename(`Intercept` = b_Intercept,
+         `Max Temperature` = b_tmax,
+         `Precipitation` = b_pr) |>
+  pivot_longer(-date) |>
+  group_by(date, name) |>
+  summarise(
+    lower = quantile(value, 0.25),
+    median = median(value),
+    upper = quantile(value, 0.75)
+  ) |>
+  ggplot(aes(x = date, y = median)) +
+  geom_point(col = "blue", alpha = 0.2) +
+  geom_smooth() +
+  facet_wrap(~name, scale = "free_y") +
+  theme_bw() + xlab("") + ylab("") +
+  theme(strip.background = element_rect(fill="white"))
+
+```
+Next they can be mapped over space and time using the original observation locations and the `year` of observation. Notice that the gradient is now South to North, with little variation over time:
+
+```{r svccoefs4, fig.height = 6, fig.width = 7, fig.cap = "The varying `tmax` (Maximum temperature) coefficient estimates over space and time."}
+# title
+tit <-expression(paste(""*beta[`tmax`]*"")) 
+# plot 
+ggplot()  + 
+  geom_sf(data = vcs, aes(col = b_tmax)) + 
+  scale_colour_continuous_c4a_div(palette="brewer.rd_yl_bu",name = tit) + 
+  facet_wrap(~year) + 
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.17), 
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank())  
+```
+
+This lack of temporal variation is confirmed if the coefficient estimates are mapped annually over the grid: 
+
+```{r svccoefs5, eval = T, echo = T, cache = cache.val, fig.cap = "The varying `tmax` (Maximum temperature) coefficient estimates over space and time and the grid surface."}
+# create time slices
+years <- sort(unique(vcs$year))
+# calculate over the grid for each time slice
+res_out <- matrix(nrow = nrow(chaco_grid), ncol = 0)
+for (i in 1:length(years)){
+  # convert years to months - here getting month 6
+  month.val <- ((years[i]-min(years)) * 12) + 6
+  res.i <- calculate_vcs(input_data = chaco_grid |> mutate(month = month.val),
+                         mgcv_model = gam.m,
+                         terms = c("Intercept", "tmax", "pr"))
+  # select all the coefficient estimates 
+  res.i <- 
+    res.i |> 
+    st_drop_geometry() |> 
+    select(starts_with("b_"), 
+           starts_with("se_"),
+           starts_with("t_")) 
+  # rename coefficients estimates
+  names(res.i) <- paste0(names(res.i), "_", years[i])
+  # bind to the result
+  res_out <- cbind(res_out, res.i)
+  # cat(years[i], "\t")
+}
+# join to the grid
+chaco_grid |> 
+  cbind(res_out) |>
+  # select the variables and pivot longer
+  select(starts_with("b_tmax")) |> 
+  # rename and select with transmute
+  transmute(`2012` = b_tmax_2012, `2013` = b_tmax_2013,
+            `2014` = b_tmax_2014, `2015` = b_tmax_2015,
+            `2016` = b_tmax_2016, `2017` = b_tmax_2017,
+            `2018` = b_tmax_2018, `2019` = b_tmax_2019,
+            `2020` = b_tmax_2020, `2021` = b_tmax_2021,
+            `2022` = b_tmax_2022
+            ) |>  
+  pivot_longer(-geometry) |>
+  # make the new time object a factor (to enforce plotting order)
+  mutate(name = factor(name, levels = years)) |>
+  # 4. and plot 
+  ggplot() + 
+  geom_sf(aes(fill = value), col = NA) +
+  # adjust default shading
+  scale_fill_continuous_c4a_div("brewer.rd_yl_bu", name = tit) +
+  # facet
+  facet_wrap(~name, ncol = 4) +
+  # apply and modify plot theme
+  theme_bw() + 
+  theme(
+    legend.position = "inside",
+    legend.position.inside = c(0.9, 0.17), 
+	  strip.background = element_rect(fill="white", colour = "white"), 
+	  strip.text = element_text(size = 8, margin = margin(b=4)),
+		axis.title=element_blank(),
+		axis.text=element_blank(),
+    axis.ticks=element_blank()) 
+```
+
+
+### 3.5 Summary
+
+This section has illustrated the the use of functions in the the `stgam` package. It suggests the following workflow:
+
+1.  Prepare the data, for example by lengthening the `data.frame`, `tibble` or `sf` object containing the data, to have observations with single location and / or time values (in the above examples  these were `X`,`Y`and `month`), and an Intercept as an addressable term.
+2.  Evaluate all possible models. For spatial or temporal problems each predictor is specified in 3 ways, for space-time problems each predictor is specified in 6 ways.
+3.  Rank the models by their AIC score, identify any consistent model specification trends in the top ranked models and select the best model with the lowest AIC score (i.e. the model with the lowest prediction error). 
+4.  Extract the formula and create the final model.
+5.  Calculate the varying coefficient estimates: to quantify how the relationships between the target and predictor variables vary over space, time or space-time.
+6.  Create maps, time series plots etc.
+
+This workflow evaluates and ranks multiple models using the model AIC value. This was done algorithmically using the `evaluate_models()` function. However, this was not undertaken in isolation. Rather it built on the investigations in Section 3 to determine whether space and time effects were present in the data.  This set of model investigations were undertaken to both develop and confirm knowledge of processes related to NDVI in the Chaco dry rainforest. That is, the analysis was both considered and contextual. For example, in this section it was determined that a spatially varying intercept term was appropriate but with a different dataset others forms may be suggested. Similarly a larger model space could be  examined with more variables. The `stgam` package allows these choices to be validated through an automated approach, providing an exploration of the full set of potential choices. 
+ 
+### 3.6 Useful resources
+
+We think these talks by Noam Ross provide really useful tips and pointers for working with GAMs and `mgcv`: 
+
+- https://www.youtube.com/watch?v=q4_t8jXcQgc
+- https://www.youtube.com/watch?v=sgw4cu8hrZM
+
+
+### 3.7 Final words
+
+The rationale for using GAMs with TP smooths for spatially varying coefficient or temporally varying coefficient models is as follows: 
+
+- GAMs with smooths (splines) capture non-linear relationships between the response variable and covariates.
+- Smooths generate a varying coefficient model when they are parameterised with more than one variable. 
+- This is readily extending to the temporal and / or spatial dimensions to generate temporally, spatially and space-time varying coefficient models.
+- Different smooths are available, but Tensor Products smooths can be used combine space and time because they undertake anisotropic smoothing across space and time separately, that have different measurement scales.
+- GAMs are robust, have a rich theoretical background and been subject to much development.
+
+The workflow suggested in this vignette and in the `stgam` package is to determine the most appropriate model form (both steps evaluated by minimising AIC. The 'best' model can then be extracted an examined for the nature of the space-time interactions it suggests, before generating the varying coefficient estimates and mapping or plotting the results. 
+
+Future developments will seek to examine the scales of spatial dependencies in the data sing kriging based approaches and will extend the `stgam` package to work with large data (i.e. to draw from the functionality of the `bam` function in `mgcv`).
+
+
+## References
+
