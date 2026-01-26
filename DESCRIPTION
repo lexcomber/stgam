@@ -4,7 +4,7 @@ Version: 1.2.0
 Authors@R: c(
     person("Lex", "Comber", email = "a.comber@leeds.ac.uk", role = c("aut", "cre")),
     person("Paul", "Harris", email = "paul.harris@rothamsted.ac.uk", role = c("ctb")),
-    person("Gonzalo, "Irisarri", email = "jirisarr@uwyo.edu", role = c("ctb")),
+    person("Gonzalo", "Irisarri", email = "jirisarr@uwyo.edu", role = c("ctb")),
     person("Chris", "Brunsdon", email = "christopher.brunsdon@mu.ie", role = c("ctb"))
            )
 Author: Lex Comber [aut, cre],

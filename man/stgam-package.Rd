@@ -6,7 +6,7 @@
 \alias{stgam-package}
 \title{stgam: Spatially and Temporally Varying Coefficient Models Using Generalized Additive Models}
 \description{
-A framework for specifying spatially, temporally and spatially-and-temporally varying coefficient models using Generalized Additive Models with smooths. The smooths are parameterised with location, time and predictor variables. The framework supports the investigation of the presence and nature of any space-time dependencies in the data by evaluating multiple model forms (specifications) using a Generalized Cross-Validation score. The workflow sequence is to: i) Prepare the data by lengthening it to have a single location and time variables for each observation. ii) Evaluate all possible spatial and/or temporal models in which each predictor is specified in different ways. iii) Evaluate each model and pick the best one. iv) Create the final model. v) Calculate the varying coefficient estimates to quantify how the relationships between the target and predictor variables vary over space, time or space-time. vi) Create maps, time series plots etc. For more details see: Comber et al (2023) \doi{10.4230/LIPIcs.GIScience.2023.22}, Comber et al (2024) \doi{10.1080/13658816.2023.2270285} and Comber et al (2004) \doi{10.3390/ijgi13120459}.
+A framework for specifying space-time varying coefficient models using Generalized Additive Models (GAMs) with smooths. The smooths are parameterised with location, time and predictor variables. The framework suggests the need to investigate for the presence and nature of any space-time dependencies in the data. It proposes a workflow that creates and refines an initial space-time GAM and includes tools to create and evaluate multiple model forms. The workflow sequence is to: i) Prepare the data by lengthening it to have a single location and time variables for each observation. ii) Evaluate all possible spatial and/or temporal models in which each predictor is specified in different ways. iii) Evaluate each model and pick the best one. iv) Create the final model. v) Calculate the varying coefficient estimates to quantify how the relationships between the target and predictor variables vary over space, time or space-time. vi) Create maps, time series plots etc. The number of knots used in each smooth can be specified directly or iteratively increased. This builds on work in Comber et al (2024) \doi{10.1080/13658816.2023.2270285} and Comber et al (2004) \doi{10.3390/ijgi13120459}.
 }
 \seealso{
 Useful links:
@@ -22,6 +22,7 @@ Useful links:
 Other contributors:
 \itemize{
   \item Paul Harris \email{paul.harris@rothamsted.ac.uk} [contributor]
+  \item Gonzalo Irisarri \email{jirisarr@uwyo.edu} [contributor]
   \item Chris Brunsdon \email{christopher.brunsdon@mu.ie} [contributor]
 }
 
