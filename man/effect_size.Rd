@@ -27,8 +27,8 @@ require(doParallel)
 data("chaco")
 m <- gam(
 ndvi ~
-  te(X,Y,month, by = tmax, bs = c("tp", "cr"), d = c(2,1)) +
-  pr + s(X,Y, by = pr) + s(month, by = pr),
+  te(X,Y, by = tmax) +
+  s(X,Y, by = pr),
  data = chaco,
  method = "REML",
  family = gaussian()
