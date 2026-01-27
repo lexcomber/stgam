@@ -63,6 +63,7 @@ a \code{data.frame} with indices for each predictor variable, the knots specifie
 Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
 }
 \examples{
+\dontrun{
 require(dplyr)
 require(doParallel)
 require(sf)
@@ -125,5 +126,6 @@ svc_k2_mods <-
   )
 # have a look!
 svc_k2_mods
+}
 
 }

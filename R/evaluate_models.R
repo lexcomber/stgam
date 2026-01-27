@@ -36,6 +36,7 @@
 #' @importFrom stats sd
 #'
 #' @examples
+#' \dontrun{
 #' require(dplyr)
 #' require(doParallel)
 #' require(sf)
@@ -98,6 +99,7 @@
 #'   )
 #' # have a look!
 #' svc_k2_mods
+#'}
 #'
 #' @export
 evaluate_models <- function(input_data,

@@ -3,7 +3,7 @@
 \docType{data}
 \name{chaco}
 \alias{chaco}
-\title{Chaco dry rainforest dataset (2012-2022)}
+\title{Chaco dry rainforest data (2012-2022)}
 \format{
 A \code{sf} POINT dataset with 2000 observations and 12 fields.
 \describe{
