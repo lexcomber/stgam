@@ -65,12 +65,18 @@ head(chaco)
 
 ## 2. Space-time GAM contruction and considertations
 
+```{r echo = F, eval = T}
+load("model_summaries.RData")
+```
+
 ### 2.1 Overview
 
 This section works through an example of constructing a space-time GAM to illustrate a workflow that allows for spatio-temporally varying terms, using the Chaco dataset. It fits an initial complex model and then, through investigation of the results, refines the how the model is specified. In so doing a number of important considerations are illustrated relating the bases that are specified, their dimensions, the GAM fitting method, the model family and the number of knots used in the smooths.     
 
-In the GAMs created in this vignette and this package, the Intercept is treated as an explicitly addressable term. By way of example, consider the model `m` created below:
-```{r eval = F}
+In the GAMs created in this vignette and this package, the Intercept is treated as an explicitly addressable term. 
+
+By way of example, consider the model `m` created below:
+```{r eval = T}
 m  <- gam(ndvi~s(X,Y) + s(month) + pr, data = chaco)
 summary(m)
 ```
@@ -88,7 +94,7 @@ summary(m)
 
 The model summary now includes `Intercept` as a parametric term (rather than `(Intercept)`) with `s(X,Y):Intercept` and `s(month):Intercept` as smooth terms, rather than `s(X,Y) `and `s(month)`, but the values in both model summaries are all the same. 
 
-The rationale for this is because in  varying coefficient modelling it often desirable to treat the Intercept as an explicitly addressable term [@harris2019simulation]. Specifying a varying intercept over space and or time detects situations when the response variable (the $y$-value) may show notably low or high values in a space-time locality that were not accounted for by variation in the explanatory values. This could be caused, for example, if variables not recorded in the study were causing otherwise unexplained space-time patterns in the $y$ variable. As such, a varying intercept commonly tends to capture autocorrelated errors [@harris2019simulation] and background variation that has the potential to affect other varying coefficient estimates. It also simplifies the interpretation of other varying coefficient estimates, particularly if the predictor variables are not mean-centred.
+The rationale for treating the Intercept as addressable term is because, in varying coefficient modelling, specifying a varying intercept over space and or time detects situations when the response variable (the $y$-value) may show notably low or high values in a space-time locality that were not accounted for by variation in the explanatory values [@harris2019simulation]. This could be caused, for example, if variables not recorded in the study were causing otherwise unexplained space-time patterns in the $y$ variable. As such, a varying intercept commonly tends to capture autocorrelated errors [@harris2019simulation] and background variation that has the potential to affect other varying coefficient estimates. It also simplifies the interpretation of other varying coefficient estimates, particularly if the predictor variables are not mean-centred.
 
 The models in this vignette include the Intercept as an addressable term and the code below creates this variable in the input data:
 ```{r data_prep}
@@ -100,7 +106,7 @@ chaco <-
 ### 2.2 Space-time GAMs
 
 An initial space-time GAM is fitted using the code below. Notice that for each predictor variable and the explicitly specified intercept, the model specifies Tensor Product (TP) smooths to capture the variations in NDVI (`ndvi`) in both space and time simultaneously. These are tensor product smooths, specified using the `te()` function, and are described below. Notice also that global *parametric* parameters are also specified for `tmax`, `pr` and `Intercept`. This is to provide a multiplicative constant as well as a function around the coefficient term, and potentially an offset term.   
-```{r m1, eval = T, echo = T, cache = cache.val}
+```{r m1, eval = F, echo = T}
 # initial model
 m1 <- gam(
   ndvi ~ 0 +
@@ -118,8 +124,17 @@ Finally, the model is specified with a Gaussian family and the model is fitted u
 
 The model can be examined using the `appraise` function in the `gratia` package [@simpson2024gratia; @simpson2025package] which generates diagnostic plots of the model residuals (the difference between the observed value of $y$ (in this case `ndvi`) and the predicted value of $y$, also referred to as $\hat{y}$ : 
 
-```{r appm1, eval = T, echo = T, cache = cache.val, fig.cap = "Diagnostic plots of `m1`."}
+```{r eval = F, echo = T}
 appraise(m1, method = "simulate")
+```
+
+```{r appm1, echo = F, eval = T, warning = F, message = F, out.width = "100%", fig.cap = "Diagnostic plots of `m1`."}
+library(cowplot)
+img1 <- ggdraw() + draw_image("appraise_plot_1.png")
+img2 <- ggdraw() + draw_image("appraise_plot_2.png") 
+img3 <- ggdraw() + draw_image("appraise_plot_3.png")
+img4 <- ggdraw() + draw_image("appraise_plot_4.png")
+plot_grid(img1, img2, img3, img4, ncol = 2)
 ```
 
 The diagnostic plots show that the top and bottom and of the QQ plot are close to the theoretical fit line and that the modelled quantiles are close to the theoretical one. This indicates that there are a low number of residuals - observed quantiles that are not on the theoretical fit line. If there were a high number - i.e. the QQ plot had an S-shape - then this would suggest residual heterogeneity, potentially due to un-modelled interactions or due to an inappropriate assumption of a Gaussian model. In such cases other response should be investigated for example through histograms and specified accordingly via the `family` parameter that is passed to the GAM - see below. 
@@ -159,22 +174,33 @@ This vignette and the current version of the `stgam` package considers only a Ga
 ### 2.3 Space-time GAM Refinement II: Effect size
 
 Having determined that correct model family has been specified for the response variable, the model summary can be examined:
-```{r}
+
+```{r eval = F, echo = T}
 summary(m1)
 ```
+
+```{r echo = F, eval = T}
+cat(sum_m1, sep = "\n")
+```
+
 This indicates that `pr` specified in a space-time smooth is not significant but that all of the other model components are.  
 
-To unpick this further and to provide a further basis for model evaluation, it is also instructive to examine the size of the effect of each model component. The code below generates numeric summaries of the effects of each smooth by extracting the effect of each term from the model using the `predict` function. The typical size of each smooth's contribution to predictions are summarised from their standard deviations (`sd`) and the total amplitude of the smooth effects (`range`), where higher values indicate a larger effect on the target variable. This is undertaken below and the code snippets have been wrapped into the `effect_size` function in `stgam`.    
-```{r}
+To unpick this further and to provide a further basis for model evaluation, it is also instructive to examine the size of the effect of each model component. The code below generates numeric summaries of the effects of each smooth by extracting the effect of each term from the model using the `predict` function. The typical size of each smooth's contribution to predictions are summarised from their standard deviations (`sd`) and the total amplitude of the smooth effects (`range`), where higher values indicate a larger effect on the target variable. This is undertaken below and the code snippets have been wrapped into the `effect_size` function in `stgam`. 
+
+```{r eval = F, echo = T}
 # extract the terms 
 f1 <- predict(m1, type = "terms")
 # generate numeric summaries  
 apply(f1, 2, function(v) c(sd = sd(v), range = diff(range(v)))) |> round(3)
 ```
 
+```{r eval = T, echo = F}
+effect_m1
+```
+
 This shows the size of the effect of each model component. Considering the ranges, we can see the zero effect of the parametric `Intercept` and `pr` term and the low partial effect of the TP smooth for the `pr` term, suggesting a lack of interaction over space-time for this this predictor variable. A possible refinement in this case could be to remove the fixed `Intercept` and `pr` terms but we would like to retain them as constants and offsets. The range value of the combined space-time smooth for `pr` is relatively low (`te(X,Y,month):pr`) and it may be useful to examine `pr` over space and time separately. In the code below the individual space and time smooths are specified as thin plate regression smooths, in `s()` function in the `mgcv` package. 
 
-```{r m2, eval = T, echo = T, cache = cache.val}
+```{r m2, eval = F, echo = T}
 # second model with separate space-time effects for pr
 m2 <- gam(
   ndvi ~ 0 +
@@ -188,8 +214,12 @@ m2 <- gam(
 ```
 
 Then effect size can be examined using the `effect_size` function: 
-```{r}
+```{r eval = F, echo = T}
 effect_size(m2)
+```
+
+```{r eval = T, echo = F}
+effect_m2
 ```
 
 Now the size of the effect of `pr` is split and is larger over both space (`tmax s(X,Y):pr`) and time (`s(month):pr`), compared to the `m1` GAM model. This demonstrate how evaluating and comparing models with different space-time smooths can help to determine whether to model them interactively or not, and what the changes in the magnitude of the modelled response surface might be. 
@@ -238,7 +268,7 @@ kable(tab,
 
 As a general rule of thumb, the `k` value should be doubled if the check reveals it to be too low. This is done for the temporal smooth specified for `pr` in the code below to create `m3` and note that as `k` increases so does the time to fit the model:
 
-```{r m3, eval = T, echo = T, cache = cache.val}
+```{r m3, eval = F, echo = T}
 # third model with increased k for the pr temporal smooth
 m3 <- gam(
   ndvi ~ 0 +
@@ -251,13 +281,17 @@ m3 <- gam(
 )
 ```
 The `gam.check` function calls the `k.check` function, provides some interpretation notes and diagnostic plots. However, the `k.check` function can be called directly:  
-```{r eval = T, echo = T}
+```{r eval = F, echo = T}
 # check the model smooths
 k.check(m3)
 ```
 
+```{r eval = T, echo = F}
+k_check_m3
+```
+
 This shows some improvement, with the EDF now increased but still close to `k` for the smooth and the `k-index` still much lower than 1. The model below tries to improve the fit by increasing `k` once more:
-```{r m4, eval = T, echo = T, cache = cache.val}
+```{r m4, eval = F, echo = T}
 # fourth model with increased k for the pr temporal smooth
 m4 <- gam(
   ndvi ~ 0 +
@@ -271,8 +305,13 @@ m4 <- gam(
 # check the model smooths
 k.check(m4)
 ```
+
+```{r eval = T, echo = F}
+k_check_m4
+```
+
 Again some improvement is shown but this can be nudged further: 
-```{r m5, eval = T, echo = T, cache = cache.val}
+```{r m5, eval = F, echo = T}
 # fifth model with increased k for the pr temporal smooth
 m5 <- gam(
   ndvi ~ 0 +
@@ -287,8 +326,13 @@ m5 <- gam(
 k.check(m5)
 ```
 
+```{r eval = T, echo = F}
+k_check_m5
+```
+
 Some further improvement is evident but this process of increasing `k` should continue. However, the number of knots cannot be increased infinitely due the data observations, the number of terms in the model and how they combine to determine the effective degrees of freedom (`edf`). The code below increases the number of knots by 40 as in this case there are only 120 unique values for months.
-```{r m6, eval = T, echo = T, cache = cache.val}
+
+```{r m6, eval = F, echo = T}
 # sixth model with increased k for the pr temporal smooth
 m6 <- gam(
   ndvi ~ 0 +
@@ -303,39 +347,67 @@ m6 <- gam(
 k.check(m6)
 ```
 
+```{r eval = T, echo = F}
+k_check_m6
+```
+
 In this case the check shows that there is sufficiently a large difference between `k` (120) and `edf` (~80) and the `k-index` is closer to 1 (0.84). The final model can be examined the usual way:
 ```{r eval = F}
 appraise(m6, method = "simulate")
 ```
 
 The effects of the terms can be examined as before:
-```{r}
+```{r eval = F, echo = T}
 effect_size(m6)
+```
+
+```{r eval = T, echo = F}
+effect_m6
 ```
 
 The refined model above, `m6`, shows improvement, with the effect of `pr` over time relatively high (`s(month):pr`). Its effect over over space (`s(X,Y):pr`) is relatively low and potentially the spatial smooth for `pr` could be dropped. Some confirmation for this decision is provided when the module summary is examined: 
 
-```{r eval = T}
+```{r echo = T, eval = F}
 summary(m6)
 ```
+
+```{r eval = T, echo = F}
+cat(sum_m6, sep = "\n")
+```
+
 
 However in this case, the `m6` model is retained as the final model as the effect sizes are relatively strong for both components. It specifies a space-time TP smooth for the Intercept and for `tmax`, and separate spatial and temporal smooth for `pr`. All of the parametric terms are retained: 
 
 The size of the effects can be examined and compared with the original model `m1`:   
-```{r}
+```{r eval = F, echo = T}
 # original model
 effect_size(m1)
+```
+```{r eval = T, echo = F}
+effect_m1
+```
+```{r eval = F, echo = T}
 # tuned model  
 effect_size(m6)
 ```
+```{r eval = T, echo = F}
+effect_m6
+```
+
 
 The ranges of the final model (`m6`) still indicate the strong space-time interaction of NDVI with the `tmax` in the TP smooth (`te(X,Y,month):tmax`) and the interactions of `pr` in separate space and time smooths (`s(X,Y):pr` and `s(month):pr)`).
 
 The AICs of the 2 models can be compared and the final model shows a dramatic improvement (i.e. reduction in value) from the original: 
-```{r}
+```{r eval = F, echo = T}
 # AIC comparison
 m1$aic; m6$aic
 ```
+
+```{r eval = T, echo = F}
+aic_m1; aic_m6 
+```
+
+
 
 ### 2.5. Extracting, summarising and plotting the coefficients 
 
@@ -345,7 +417,7 @@ For the first option, the original data, the GAM and a vector of the model terms
 
 Considering first the original observations:
 
-```{r vcs, eval = T, echo = T, cache = cache.val}
+```{r vcs, eval = F, echo = T}
 vcs <- calculate_vcs(input_data = chaco,
                      mgcv_model = m6, 
                      terms = c("Intercept", "tmax", "pr"))
@@ -437,7 +509,7 @@ plot(st_geometry(chaco_grid))
 
 In order to generate annual gridded estimates of the coefficients over grid space, the model passed to the `calculate_vcs` function requires the space and time inputs that were used in the model: `X`, `Y` and `month`. The `chaco_grid` object has locational attributes but the  temporal attributes need to be created. The `for` loop below does this, extracts the coefficient estimates for the specified month - here the sixth month in each year - and then combines them. 
 
-```{r svccoefs2, eval = T, echo = T, cache = cache.val}
+```{r svccoefs2, eval = F, echo = T}
 # create time slices
 years <- sort(unique(vcs$year))
 # calculate over the grid for each time slice
@@ -501,6 +573,40 @@ chaco_grid |>
     axis.ticks=element_blank()) 
 ```
 
+
+```{r echo = F, eval = F}
+# save summaries for CRAN vignette
+p_m1 <- appraise(m1, method = "simulate")
+
+sum_m1 <- summary(m1)
+effect_m1 <- apply(f1, 2, function(v) c(sd = sd(v), range = diff(range(v)))) |> round(3)
+
+effect_m2 <- effect_size(m2)
+
+# check the model smooths
+k_check_m3 <- k.check(m3)
+
+k_check_m4 <- k.check(m4)
+
+k_check_m5 <- k.check(m5)
+k_check_m6 <- k.check(m6)
+
+aic_m1 <- m1$aic
+aic_m2 <- m2$aic
+aic_m3 <- m3$aic
+aic_m4 <- m4$aic
+aic_m5 <- m5$aic
+aic_m6 <- m6$aic
+
+setwd("~/Library/CloudStorage/Dropbox/Lex_GGP_GAM/stgam/vignettes")
+save(p_m1, sum_m1, effect_m1, effect_m2, k_check_m3, 
+     k_check_m4, k_check_m5, k_check_m6, sum_m6, 
+     aic_m1, aic_m2, aic_m3, aic_m4, aic_m5, aic_m6,
+     vcs, years, res_out, 
+     file = "model_summaries.RData")
+```
+
+
 ### 2.6 Summary 
 
 The above subsections describes a sequence of model construction, investigation and refinement, which, after specifying an initial Gaussian model that incorporated space-time smooths for each predictor variable, required a number of GAM-related considerations to be expanded upon. 
@@ -526,9 +632,15 @@ One way to evaluate models is to compare them using some metric. Commonly AIC [@
 
 The code below extracts the AIC from each of the models specified in the last section and prints them out in order. Here it can be seen that the `m6` model has the lowest prediction error (lowest AIC), with `pr` specified in separate space and time smooths. 
 
-```{r}
+```{r echo = T, eval = F}
 data.frame(Model = paste0("m", c(1:6)),
            AIC = c(m1$aic, m2$aic, m3$aic, m4$aic, m5$aic, m6$aic)) |> 
+  # rank the models 
+  arrange(AIC)
+```
+```{r eval = T, echo = F}
+data.frame(Model = paste0("m", c(1:6)),
+           AIC = c(aic_m1, aic_m2, aic_m3, aic_m4, aic_m5, aic_m6)) |> 
   # rank the models 
   arrange(AIC)
 ```
@@ -788,6 +900,59 @@ The workflow suggested in this vignette and in the `stgam` package is to determi
 
 Future developments will seek to examine the scales of spatial dependencies in the data sing kriging based approaches and will extend the `stgam` package to work with large data (i.e. to draw from the functionality of the `bam` function in `mgcv`).
 
+
+```{r echo = F, eval = F}
+# save summaries for CRAN vignette
+# 1. save PNGs to local directory
+library(patchwork)
+p_m1 <- appraise(m1, method = "simulate")
+plots <- patchwork:::get_patches(p_m1)$plots
+for (i in seq_along(plots)) {
+  ggsave(
+    filename = paste0("appraise_plot_", i, ".png"),
+    plot = plots[[i]],
+    width = 6,
+    height = 4
+  )
+}
+# 2. other stuff
+# sum_m1 <- summary(m1)
+sum_m1 <- capture.output(summary(m1))
+# cat(sum_m1, sep = "\n")
+
+effect_m1 <- apply(f1, 2, function(v) c(sd = sd(v), range = diff(range(v)))) |> round(3)
+
+effect_m2 <- effect_size(m2)
+
+# check the model smooths
+k_check_m3 <- k.check(m3)
+
+k_check_m4 <- k.check(m4)
+
+k_check_m5 <- k.check(m5)
+
+k_check_m6 <- k.check(m6)
+effect_m6 <- effect_size(m6)
+
+# sum_m6 <- summary(m6)
+sum_m6 <- capture.output(summary(m6))
+# cat(sum_m6, sep = "\n")
+
+aic_m1 <- m1$aic
+aic_m2 <- m2$aic
+aic_m3 <- m3$aic
+aic_m4 <- m4$aic
+aic_m5 <- m5$aic
+aic_m6 <- m6$aic
+
+setwd("~/Library/CloudStorage/Dropbox/Lex_GGP_GAM/stgam/vignettes")
+save(sum_m1, effect_m1, effect_m2, k_check_m3, 
+     k_check_m4, k_check_m5, k_check_m6, effect_m6, sum_m6, 
+     aic_m1, aic_m2, aic_m3, aic_m4, aic_m5, aic_m6,
+     vcs, years, res_out, 
+     file = "model_summaries.RData",
+     compress = "xz")
+```
 
 ## References
 
