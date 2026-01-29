@@ -1,6 +1,6 @@
 ---
 title: "A Geographer's introduction to GAMs"
-author: "Lex Comber, Paul Harris and Chris Brunsdon"
+author: "Lex Comber, Paul Harris, Gonzalo Irisarri and Chris Brunsdon"
 date: "January 2026"
 output: rmarkdown::html_vignette
 bibliography: vignette.bib
