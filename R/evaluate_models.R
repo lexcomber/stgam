@@ -339,7 +339,7 @@ evaluate_models <- function(input_data,
   }
 
   get_formula <- function(indices, k_set) {
-    form.i <- glue("{target_var} ~ Intercept - 1")
+    form.i <- glue("{target_var} ~ 0 + Intercept")
     form.i <- paste0(form.i, get_form_intercept(indices[1], k_set))
     for (j in seq_along(vars)) {
       varname <- vars[j]
