@@ -11,7 +11,7 @@
 #' @param k_set a logical value for user defined `k` values. The default is `FALSE`. Cannot be used with `k_increase`.
 #' @param spatial_k the value of `k` for spatial smooths if `k_set` is `TRUE`.
 #' @param temporal_k the value of `k` for temporal smooths if `k_set` is `TRUE`.
-#' @param k_increase a logical value of whether to check and increase the number of knots in each smooth. The default is `FALSE`.
+#' @param k_increase a logical value of whether to check and increase the number of knots in each smooth. The default is `FALSE`. Cannot be used with `k_set`.
 #' @param k2edf_ratio a threshold of the ratio of the number of knots, `k`, in each smooth to its Effective Degrees of Freedom. If any smooth has a *knots-to-EDF* ratio less than this value then the knots are iteratively increased by the `k_multiplier` value until the threshold check is passed, the number knots passes the maximum degrees of freedom, or the number of iterations, `max_iter` is reached. Cannot be used with `k_set`.
 #' @param k_multiplier a multiplier by which the knots are increased on each iteration. The default is 2.
 #' @param max_iter the maximum number of iterations that `k` is increased.
@@ -99,7 +99,27 @@
 #'   )
 #' # have a look!
 #' svc_k2_mods
-#'}
+#'
+#' # example 4 with 30 models and `k` adjustment
+#' svc_k3_mods <-
+#'   evaluate_models(
+#'     input_data = input_data,
+#'     target_var = "ndvi",
+#'     vars = c("tmax"),
+#'     model_family = "gaussian()",
+#'     coords_x = "X",
+#'     coords_y = "Y",
+#'     time_var = "month",
+#'     VC_type = "STVC",
+#'     k_increase = TRUE,
+#'     k2edf_ratio = 1.5,
+#'     k_multiplier = 1.5,
+#'     max_iter = 10,
+#'     ncores = detectCores()-1
+#'   )
+#' # have a look!
+#' svc_k4_mods
+#' }
 #'
 #' @export
 evaluate_models <- function(input_data,
@@ -184,62 +204,70 @@ evaluate_models <- function(input_data,
   ## 2. INTERNAL FUNCTIONS to increase k
   ## ---------------------------------------------------------
 
-  ## 2.1 Increase k
-  increase_k <- function(m, k2edf_ratio, k_multiplier) {
-    if (!inherits(m, "gam"))
-      stop("m must be a mgcv GAM model")
-    # --- 1. Get k.check table ---
-    tab <- k.check(m)
-    r   <- tab[, 1] / tab[, 2]
-    k_increase <- which(r < k2edf_ratio)
-    old_k_vals <- tab[, 1]
-    # Nothing to change
-    if (length(k_increase) == 0)
-      return(m$formula)
-    # --- 2. Extract smooth terms from formula string ---
-    form_str <- paste(deparse(m$formula), collapse = " ")
-    smooth_terms <- regmatches(
-      form_str,
-      gregexpr("s\\([^\\)]+\\)|te\\([^\\)]+\\)|ti\\([^\\)]+\\)",
-               form_str)
-    )[[1]]
-    # --- helper: update or insert k ---
-    update_k_in_smooth <- function(s_term, new_k) {
-      # CASE 1: Smooth already has a k= argument
-      if (grepl("k\\s*=", s_term)) {
-        # replace the existing k= value
-        s_new <- sub(
-          "k\\s*=\\s*[^,\\)]+",
-          paste0("k=", new_k),
-          s_term
-        )
-        return(s_new)
+  ## 2.1 Increase k without regex
+  increase_k_from_kcheck <- function(m, k2edf_ratio = 1.5, k_multiplier = 1.5) {
+    # get smooths and ratios
+    kc <- mgcv::k.check(m)
+    ratio <- kc[, "k'"] / kc[, "edf"]
+    smooths_to_fix <- rownames(kc)[ratio < k2edf_ratio]
+    sm <- m$smooth
+    # set up llop through smooths
+    new_terms <- vector("list", length(sm))
+    for (i in seq_along(sm)) {
+      s <- sm[[i]]
+      # determine current k
+      if (!is.null(s$margin)) {
+        k_old <- vapply(s$margin, function(x) x$bs.dim, numeric(1))
+      } else {
+        k_old <- s$bs.dim
       }
-      # CASE 2: Smooth does NOT contain k — insert before closing bracket
-      s_new <- sub(
-        "\\)$",
-        paste0(", k=", new_k, ")"),
-        s_term
-      )
-      return(s_new)
+      # get new k for qualifying smooths
+      if (s$label %in% smooths_to_fix) {
+        k_new <- ceiling(k_old * k_multiplier)
+      } else {
+        k_new <- k_old
+      }
+      terms <- s$term
+      by_var <- s$by
+      # build smooth call
+      if (!is.null(s$margin)) {
+        # tensor product smooth
+        call <- call(
+          "te",
+          as.name(terms[1]),
+          as.name(terms[2]),
+          as.name(terms[3]),
+          d = c(2, 1),
+          # bs = s$bs,
+          k = k_new,
+          by = as.name(by_var)
+        )
+      } else {
+        # standard smooth
+        call <- call(
+          "s",
+          as.name(terms[1]),
+          if (length(terms) > 1) as.name(terms[2]),
+          k = k_new,
+          by = as.name(by_var)
+        )
+      }
+      new_terms[[i]] <- call
     }
-    # --- 3. Loop over smooths where k must increase ---
-    form_new <- form_str
-    for (i in k_increase) {
-      current_smooth <- smooth_terms[i]
-      old_k <- old_k_vals[i]
-      new_k <- old_k * k_multiplier
-      updated_smooth <- update_k_in_smooth(current_smooth, new_k)
-      # replace in formula string
-      form_new <- sub(
-        fixed = TRUE,
-        pattern = current_smooth,
-        replacement = updated_smooth,
-        x = form_new
-      )
-    }
-    return(form_new)
+    # extract parametric part
+    tt <- terms(m)
+    param_terms <- attr(tt, "term.labels")
+    param_terms <- param_terms[!grepl("^s\\(|^te\\(", param_terms)]
+    param_terms <- param_terms[!(param_terms %in% c(coords_x, coords_y, time_var))]
+    # param_terms = c("Intercept", vars)
+    # rebuild formula
+    rhs <- c(param_terms, sapply(new_terms, deparse))
+    # final tidy to get rid of any NULLs
+    rhs <- gsub("NULL,", "", rhs)
+    new_formula <- reformulate(rhs, response = as.character(formula(m)[[2]]))
+    new_formula
   }
+
   ## 2.2 Iteratively increase k
   iterate_increase_k <- function(m, k2edf_ratio, k_multiplier, max_iter, model_family) {
     old_m <- m
@@ -258,11 +286,7 @@ evaluate_models <- function(input_data,
         break
       }
       # 4. Build updated formula
-      new_formula_str <- increase_k(
-        m,
-        k2edf_ratio = k2edf_ratio,
-        k_multiplier = k_multiplier
-      )
+      new_formula_str <- increase_k_from_kcheck(m, k2edf_ratio = k2edf_ratio, k_multiplier = k_multiplier)
       new_formula <- as.formula(new_formula_str)
       # 5. Refit model
       old_m <- m
