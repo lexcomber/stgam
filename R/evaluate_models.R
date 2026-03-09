@@ -34,6 +34,7 @@
 #' @importFrom stats family
 #' @importFrom utils installed.packages
 #' @importFrom stats sd
+#' @importFrom stats reformulate
 #'
 #' @examples
 #' \dontrun{

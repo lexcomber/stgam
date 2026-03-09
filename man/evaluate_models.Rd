@@ -46,7 +46,7 @@ evaluate_models(
 
 \item{temporal_k}{the value of \code{k} for temporal smooths if \code{k_set} is \code{TRUE}.}
 
-\item{k_increase}{a logical value of whether to check and increase the number of knots in each smooth. The default is \code{FALSE}.}
+\item{k_increase}{a logical value of whether to check and increase the number of knots in each smooth. The default is \code{FALSE}. Cannot be used with \code{k_set}.}
 
 \item{k2edf_ratio}{a threshold of the ratio of the number of knots, \code{k}, in each smooth to its Effective Degrees of Freedom. If any smooth has a \emph{knots-to-EDF} ratio less than this value then the knots are iteratively increased by the \code{k_multiplier} value until the threshold check is passed, the number knots passes the maximum degrees of freedom, or the number of iterations, \code{max_iter} is reached. Cannot be used with \code{k_set}.}
 
@@ -126,6 +126,26 @@ svc_k2_mods <-
   )
 # have a look!
 svc_k2_mods
+
+# example 4 with 30 models and `k` adjustment
+svc_k3_mods <-
+  evaluate_models(
+    input_data = input_data,
+    target_var = "ndvi",
+    vars = c("tmax"),
+    model_family = "gaussian()",
+    coords_x = "X",
+    coords_y = "Y",
+    time_var = "month",
+    VC_type = "STVC",
+    k_increase = TRUE,
+    k2edf_ratio = 1.5,
+    k_multiplier = 1.5,
+    max_iter = 10,
+    ncores = detectCores()-1
+  )
+# have a look!
+svc_k4_mods
 }
 
 }

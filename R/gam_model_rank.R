@@ -49,7 +49,7 @@
 #'     VC_type = "SVC"
 #'   )
 #' # rank the models
-#' gam_model_rank(svc_mods, show_k = T)
+#' gam_model_rank(svc_mods, show_k = TRUE)
 #' @export
 gam_model_rank <- function(res_tab, n = 10, show_k = FALSE) {
   ks_col <- which(names(res_tab) == "ks")

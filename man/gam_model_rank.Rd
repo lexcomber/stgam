@@ -4,12 +4,14 @@
 \alias{gam_model_rank}
 \title{Ranks models by AIC, giving the model form for each predictor variable.}
 \usage{
-gam_model_rank(res_tab, n = 10)
+gam_model_rank(res_tab, n = 10, show_k = FALSE)
 }
 \arguments{
 \item{res_tab}{a \code{data.frame} returned from the \code{evaluate_models()} function.}
 
 \item{n}{the number of ranked models to return.}
+
+\item{show_k}{whether to include the smooth knots in the output (defualt is \code{FALSE})}
 }
 \value{
 a \code{tibble} of the 'n' best models, ranked by AIC, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's(S)' a spatial smooth, 's(T)'  a temporal smooth and 'te(ST)' a combined space-time smooth. Model AIC is reported as are the knots in each smooth (\code{ks}) and the formula of each model (\code{f}).
@@ -45,5 +47,5 @@ svc_mods <-
     VC_type = "SVC"
   )
 # rank the models
-gam_model_rank(svc_mods)
+gam_model_rank(svc_mods, show_k = TRUE)
 }
