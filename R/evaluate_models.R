@@ -3,7 +3,7 @@
 #' @param input_data he data to be used used to create the GAM model in (`data.frame` or `tibble` format), containing an Intercept column to allow it be treated as an addressable term in the model.
 #' @param target_var the name of the target variable.
 #' @param vars a vector of the predictor variable names (without the Intercept).
-#' @param model_family the mdoel family, defaults to Guassian
+#' @param model_family the model family, defaults to Guassian
 #' @param coords_x the name of the X, Easting or Longitude variable in `input_data`.
 #' @param coords_y the name of the Y, Northing or Latitude variable in `input_data`.
 #' @param VC_type the type of varying coefficient model: options are "TVC" for temporally varying, "SVC" for spatially varying  and "STVC" for space-time.
@@ -414,7 +414,7 @@ evaluate_models <- function(input_data,
     cl <- parallel::makeCluster(ncores)
     doParallel::registerDoParallel(cl)
     on.exit(parallel::stopCluster(cl))
-    
+
     vc_res_gam <- foreach::foreach(
       i = 1:nrow(terms_grid),
       .combine = "rbind",
