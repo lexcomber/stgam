@@ -191,7 +191,7 @@ ggplot() +
   theme_bw()
 ```
 
-Thus, this diversion into smooths and splines illustrates how they model different relationships (slopes) with `y` at different locations within the variable feature space, (the `x` axis in the above example). In this way, spline smooth curves can be used to capture non-linear relationships in attribute-space (here the relationship of `x` with `y`).
+Thus, this diversion into smooths and splines illustrates how they model different relationships (slopes) with `y` at different locations within the variable feature space (the `x` axis in the above example). In this way, spline smooth curves can be used to capture non-linear relationships in attribute-space (here the relationship of `x` with `y`).
 
 Importantly, in the context of space-time varying coefficient modelling with `stgam` (see the accompanying vignette in this package), the smooth can be used to model how relationships between `x` and `y` varies with respect to time or location, if the smooth is also parameterised with those. That is moving from attribute-space to temporal- or geographical-space, respectively.
 

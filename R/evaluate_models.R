@@ -413,7 +413,8 @@ evaluate_models <- function(input_data,
   } else {
     cl <- parallel::makeCluster(ncores)
     doParallel::registerDoParallel(cl)
-
+    on.exit(parallel::stopCluster(cl))
+    
     vc_res_gam <- foreach::foreach(
       i = 1:nrow(terms_grid),
       .combine = "rbind",
@@ -423,7 +424,6 @@ evaluate_models <- function(input_data,
                    vars, coords_x, coords_y, time_var, spatial_k, temporal_k)
     }
 
-    parallel::stopCluster(cl)
   }
 
   return(vc_res_gam)

@@ -590,7 +590,7 @@ t1 <- Sys.time()
 stvc_mods <- evaluate_models(
   input_data = chaco |> st_drop_geometry(),
   target_var = "ndvi", 
-  family = "gaussian()",
+  model_family = "gaussian()",
   vars = c("tmax", "pr"),
   coords_x = "X", 
   coords_y = "Y", 
