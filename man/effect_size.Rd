@@ -2,7 +2,7 @@
 % Please edit documentation in R/effect_size.R
 \name{effect_size}
 \alias{effect_size}
-\title{Quantifies the relative effect sizes of each component of zmgcv` GAM model.}
+\title{Quantifies the relative effect sizes of each component of \code{mgcv} GAM}
 \usage{
 effect_size(mgcv_model, digits = 3)
 }
@@ -15,7 +15,7 @@ effect_size(mgcv_model, digits = 3)
 a matrix of the model terms, the size of the effect (range) ad standard deviation (sd)
 }
 \description{
-Quantifies the relative effect sizes of each component of zmgcv` GAM model.
+Quantifies the relative effect sizes of each component of \code{mgcv} GAM
 }
 \examples{
 require(dplyr)

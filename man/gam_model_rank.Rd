@@ -11,7 +11,7 @@ gam_model_rank(res_tab, n = 10, show_k = FALSE)
 
 \item{n}{the number of ranked models to return.}
 
-\item{show_k}{whether to include the smooth knots in the output (defualt is \code{FALSE})}
+\item{show_k}{whether to include the smooth knots in the output (default is \code{FALSE})}
 }
 \value{
 a \code{tibble} of the 'n' best models, ranked by AIC, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's(S)' a spatial smooth, 's(T)'  a temporal smooth and 'te(ST)' a combined space-time smooth. Model AIC is reported as are the knots in each smooth (\code{ks}) and the formula of each model (\code{f}).

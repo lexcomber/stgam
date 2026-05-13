@@ -7,8 +7,9 @@
 evaluate_models(
   input_data,
   target_var,
-  model_family = "gaussian()",
   vars,
+  model_family = "gaussian()",
+  bam = FALSE,
   coords_x = "X",
   coords_y = "Y",
   VC_type = "SVC",
@@ -28,9 +29,11 @@ evaluate_models(
 
 \item{target_var}{the name of the target variable.}
 
-\item{model_family}{the mdoel family, defaults to Guassian}
-
 \item{vars}{a vector of the predictor variable names (without the Intercept).}
+
+\item{model_family}{the model family, defaults to Guassian}
+
+\item{bam}{a logical parameter indicating whether to use the \code{bam} function to construct GAMs. The default is \code{FALSE} and the \code{gam} function. The \code{mgcv::bam} should be used for large datasets or large numbers of predictor variables.}
 
 \item{coords_x}{the name of the X, Easting or Longitude variable in \code{input_data}.}
 
@@ -77,7 +80,7 @@ input_data <-
   # remove the geometry
   st_drop_geometry()
 
-# evaluate different model forms
+# Evaluate different model forms
 # example 1 with 6 models and no `k` adjustment
 svc_mods <-
   evaluate_models(
@@ -93,7 +96,7 @@ svc_mods <-
 svc_mods
 
 # example 2 with 6 models and `k` adjustment
-svc_k1_mods <-
+svc_k2_mods <-
   evaluate_models(
     input_data = input_data,
     target_var = "ndvi",
@@ -108,10 +111,10 @@ svc_k1_mods <-
     max_iter = 10
   )
 # have a look!
-svc_k1_mods
+svc_k2_mods
 
 # example 3 with 6 models and `k` set by user
-svc_k2_mods <-
+svc_k3_mods <-
   evaluate_models(
     input_data = input_data,
     model_family = "gaussian()",
@@ -125,27 +128,43 @@ svc_k2_mods <-
     spatial_k = 20,
   )
 # have a look!
-svc_k2_mods
+svc_k3_mods
 
-# example 4 with 30 models and `k` adjustment
-svc_k3_mods <-
+# example comparing `gam` (slower) and `bam` (faster)
+t1 <- Sys.time()
+svc_GAM_mods <-
   evaluate_models(
     input_data = input_data,
     target_var = "ndvi",
-    vars = c("tmax"),
+    vars = c("tmax", "pr"),
     model_family = "gaussian()",
+    bam = FALSE,
     coords_x = "X",
     coords_y = "Y",
     time_var = "month",
     VC_type = "STVC",
-    k_increase = TRUE,
-    k2edf_ratio = 1.5,
-    k_multiplier = 1.5,
-    max_iter = 10,
     ncores = detectCores()-1
   )
-# have a look!
-svc_k4_mods
+t_gam <- Sys.time() - t1
+
+t1 <- Sys.time()
+svc_BAM_mods <-
+  evaluate_models(
+    input_data = input_data,
+    target_var = "ndvi",
+    vars = c("tmax", "pr"),
+    model_family = "gaussian()",
+    bam = TRUE,
+    coords_x = "X",
+    coords_y = "Y",
+    time_var = "month",
+    VC_type = "STVC",
+    ncores = detectCores()-1
+  )
+t_bam <- Sys.time() - t1
+
+t_gam - t_bam
+
 }
 
 }
