@@ -4,6 +4,7 @@
 #' @param target_var the name of the target variable.
 #' @param vars a vector of the predictor variable names (without the Intercept).
 #' @param model_family the model family, defaults to Guassian
+#' @param bam a logical parameter indicating whether to use the `bam` function to construct GAMs. The default is `FALSE` and the `gam` function. The `mgcv::bam` should be used for large datasets or large numbers of predictor variables.
 #' @param coords_x the name of the X, Easting or Longitude variable in `input_data`.
 #' @param coords_y the name of the Y, Northing or Latitude variable in `input_data`.
 #' @param VC_type the type of varying coefficient model: options are "TVC" for temporally varying, "SVC" for spatially varying  and "STVC" for space-time.
@@ -21,6 +22,7 @@
 #' @importFrom glue glue
 #' @importFrom dplyr mutate
 #' @importFrom mgcv gam
+#' @importFrom mgcv bam
 #' @importFrom mgcv te
 #' @importFrom mgcv s
 #' @importFrom mgcv k.check
@@ -51,7 +53,7 @@
 #'   # remove the geometry
 #'   st_drop_geometry()
 #'
-#' # evaluate different model forms
+#' # Evaluate different model forms
 #' # example 1 with 6 models and no `k` adjustment
 #' svc_mods <-
 #'   evaluate_models(
@@ -67,7 +69,7 @@
 #' svc_mods
 #'
 #' # example 2 with 6 models and `k` adjustment
-#' svc_k1_mods <-
+#' svc_k2_mods <-
 #'   evaluate_models(
 #'     input_data = input_data,
 #'     target_var = "ndvi",
@@ -82,10 +84,10 @@
 #'     max_iter = 10
 #'   )
 #' # have a look!
-#' svc_k1_mods
+#' svc_k2_mods
 #'
 #' # example 3 with 6 models and `k` set by user
-#' svc_k2_mods <-
+#' svc_k3_mods <-
 #'   evaluate_models(
 #'     input_data = input_data,
 #'     model_family = "gaussian()",
@@ -99,34 +101,52 @@
 #'     spatial_k = 20,
 #'   )
 #' # have a look!
-#' svc_k2_mods
+#' svc_k3_mods
 #'
-#' # example 4 with 30 models and `k` adjustment
-#' svc_k3_mods <-
+#' # example comparing `gam` (slower) and `bam` (faster)
+#' t1 <- Sys.time()
+#' svc_GAM_mods <-
 #'   evaluate_models(
 #'     input_data = input_data,
 #'     target_var = "ndvi",
-#'     vars = c("tmax"),
+#'     vars = c("tmax", "pr"),
 #'     model_family = "gaussian()",
+#'     bam = FALSE,
 #'     coords_x = "X",
 #'     coords_y = "Y",
 #'     time_var = "month",
 #'     VC_type = "STVC",
-#'     k_increase = TRUE,
-#'     k2edf_ratio = 1.5,
-#'     k_multiplier = 1.5,
-#'     max_iter = 10,
 #'     ncores = detectCores()-1
 #'   )
-#' # have a look!
-#' svc_k4_mods
+#' t_gam <- Sys.time() - t1
+#'
+#' t1 <- Sys.time()
+#' svc_BAM_mods <-
+#'   evaluate_models(
+#'     input_data = input_data,
+#'     target_var = "ndvi",
+#'     vars = c("tmax", "pr"),
+#'     model_family = "gaussian()",
+#'     bam = TRUE,
+#'     coords_x = "X",
+#'     coords_y = "Y",
+#'     time_var = "month",
+#'     VC_type = "STVC",
+#'     ncores = detectCores()-1
+#'   )
+#' t_bam <- Sys.time() - t1
+#'
+#' t_gam - t_bam
+#'
 #' }
 #'
 #' @export
+
 evaluate_models <- function(input_data,
                             target_var,
-                            model_family = "gaussian()",
                             vars,
+                            model_family = "gaussian()",
+                            bam = FALSE,
                             coords_x = "X",
                             coords_y = "Y",
                             VC_type = "SVC",
@@ -212,7 +232,7 @@ evaluate_models <- function(input_data,
     ratio <- kc[, "k'"] / kc[, "edf"]
     smooths_to_fix <- rownames(kc)[ratio < k2edf_ratio]
     sm <- m$smooth
-    # set up llop through smooths
+    # set up loop through smooths
     new_terms <- vector("list", length(sm))
     for (i in seq_along(sm)) {
       s <- sm[[i]]
@@ -291,8 +311,9 @@ evaluate_models <- function(input_data,
       new_formula <- as.formula(new_formula_str)
       # 5. Refit model
       old_m <- m
-      m <- try(gam(new_formula, data = m$model, method = m$method, family = model_family),
-               silent = TRUE)
+      if(!bam) m <- try(gam(new_formula, data = m$model, method = m$method, family = model_family), silent = TRUE)
+      if(bam) m <- try(bam(new_formula, data = m$model, method = m$method, family = model_family, discrete = TRUE),
+                       silent = TRUE)
       # check for running out of degrees of freedom
       if (inherits(m, "try-error")) {
         return (old_m)
@@ -377,7 +398,12 @@ evaluate_models <- function(input_data,
     indices <- unlist(terms_grid[i, ])
     f <- get_formula(indices, k_set)
     input_data <- dplyr::mutate(input_data, Intercept = 1)
-    m <- mgcv::gam(f, data = input_data, method = "REML", family = model_family)
+    # m <- mgcv::gam(f, data = input_data, method = "REML", family = model_family)
+    if(bam & any(indices > 1)) {
+      m <- mgcv::bam(f, data = input_data, method = "fREML", family = model_family, discrete = TRUE)
+    } else {
+      m <- mgcv::gam(f, data = input_data, method = "REML", family = model_family)
+    }
     if(k_increase) {
       m <- iterate_increase_k(m, k2edf_ratio = k2edf_ratio,
                               k_multiplier = k_multiplier,
@@ -413,7 +439,6 @@ evaluate_models <- function(input_data,
   } else {
     cl <- parallel::makeCluster(ncores)
     doParallel::registerDoParallel(cl)
-    on.exit(parallel::stopCluster(cl))
 
     vc_res_gam <- foreach::foreach(
       i = 1:nrow(terms_grid),
@@ -424,8 +449,10 @@ evaluate_models <- function(input_data,
                    vars, coords_x, coords_y, time_var, spatial_k, temporal_k)
     }
 
+    parallel::stopCluster(cl)
   }
 
   return(vc_res_gam)
 }
+
 

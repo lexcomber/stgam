@@ -47,3 +47,10 @@
 * updates to `gam_model_rank` to evaluate models by AIC and to report `k` for each smooth
 * new vignettes 
 * new case study dataset  
+
+# stgam 1.2.1
+
+* update to main function (`evaluate_models()`) with fast GAM option using `mgcv::bam`
+* update to `gam_model_rank()` function to include `k` in the results
+
+

@@ -2,7 +2,7 @@
 #'
 #' @param res_tab a `data.frame` returned from the `evaluate_models()` function.
 #' @param n the number of ranked models to return.
-#' @param show_k whether to include the smooth knots in the output (defualt is `FALSE`)
+#' @param show_k whether to include the smooth knots in the output (default is `FALSE`)
 #'
 #' @returns a `tibble` of the 'n' best models, ranked by AIC, with the form of each predictor variable where '---' indicates the absence of a predictor, 'Fixed' that a parametric form was specified,  's(S)' a spatial smooth, 's(T)'  a temporal smooth and 'te(ST)' a combined space-time smooth. Model AIC is reported as are the knots in each smooth (`ks`) and the formula of each model (`f`).
 #' @importFrom dplyr relocate
