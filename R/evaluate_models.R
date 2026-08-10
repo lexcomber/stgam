@@ -18,7 +18,7 @@
 #' @param max_iter the maximum number of iterations that `k` is increased.
 #' @param ncores the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.
 #'
-#' @returns a `data.frame` with indices for each predictor variable, the knots specified in each smooth (`ks`), a AIC score (`aic`) for each model and the associated formula (`f`). The output should be passed to the `gam_model_rank` function.
+#' @returns a `data.frame` with indices for each predictor variable, the knots specified in each smooth (`ks`), a AIC score (`aic`) for each model and the associated formula (`f`). See Comber et al (2026) <https://doi.org/10.1080/13658816.2026.2671964>. The output should be passed to the `gam_model_rank` function.
 #' @importFrom glue glue
 #' @importFrom dplyr mutate
 #' @importFrom mgcv gam

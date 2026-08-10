@@ -9,7 +9,7 @@ effect_size(mgcv_model, digits = 3)
 \arguments{
 \item{mgcv_model}{a GAM model created by the \code{mgcv} package}
 
-\item{digits}{the number of significant figures of uysed to report effect size}
+\item{digits}{the number of significant figures of used to report effect size}
 }
 \value{
 a matrix of the model terms, the size of the effect (range) ad standard deviation (sd)

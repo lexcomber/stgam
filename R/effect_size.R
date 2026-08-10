@@ -1,7 +1,7 @@
 #' Quantifies the relative effect sizes of each component of `mgcv` GAM
 #'
 #' @param mgcv_model a GAM model created by the `mgcv` package
-#' @param digits the number of significant figures of uysed to report effect size
+#' @param digits the number of significant figures of used to report effect size
 #'
 #' @returns a matrix of the model terms, the size of the effect (range) ad standard deviation (sd)
 #' @importFrom mgcv predict.gam

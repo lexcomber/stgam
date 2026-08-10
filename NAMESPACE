@@ -5,34 +5,48 @@ export(effect_size)
 export(evaluate_models)
 export(gam_model_rank)
 importFrom(doParallel,registerDoParallel)
-importFrom(dplyr,across)
-importFrom(dplyr,arrange)
-importFrom(dplyr,mutate)
-importFrom(dplyr,relocate)
-importFrom(dplyr,rename)
-importFrom(dplyr,slice_head)
-importFrom(dplyr,tibble)
-importFrom(foreach,"%dopar%")
-importFrom(foreach,foreach)
+importFrom(dplyr,
+  across,
+  arrange,
+  mutate,
+  relocate,
+  rename,
+  slice_head,
+  tibble
+)
+importFrom(foreach,
+  "%dopar%",
+  foreach
+)
 importFrom(glue,glue)
 importFrom(magrittr,"%>%")
-importFrom(mgcv,bam)
-importFrom(mgcv,gam)
-importFrom(mgcv,k.check)
-importFrom(mgcv,predict.gam)
-importFrom(mgcv,s)
-importFrom(mgcv,te)
-importFrom(parallel,makeCluster)
-importFrom(parallel,stopCluster)
+importFrom(mgcv,
+  bam,
+  gam,
+  k.check,
+  predict.gam,
+  s,
+  te
+)
+importFrom(parallel,
+  makeCluster,
+  stopCluster
+)
 importFrom(purrr,map2_chr)
-importFrom(stats,as.formula)
-importFrom(stats,family)
-importFrom(stats,formula)
-importFrom(stats,predict)
-importFrom(stats,reformulate)
-importFrom(stats,sd)
-importFrom(stringr,str_detect)
-importFrom(stringr,str_replace)
-importFrom(stringr,str_split)
-importFrom(utils,head)
-importFrom(utils,installed.packages)
+importFrom(stats,
+  as.formula,
+  family,
+  formula,
+  predict,
+  reformulate,
+  sd
+)
+importFrom(stringr,
+  str_detect,
+  str_replace,
+  str_split
+)
+importFrom(utils,
+  head,
+  installed.packages
+)
