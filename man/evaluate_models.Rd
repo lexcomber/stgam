@@ -60,7 +60,7 @@ evaluate_models(
 \item{ncores}{the number of cores to use in parallelised approaches (default is 2 to overcome CRAN package checks). This can be determined for your computer by running parallel::detectCores()-1. Parallel approaches are only undertaken if the number of models to evaluate is greater than 30.}
 }
 \value{
-a \code{data.frame} with indices for each predictor variable, the knots specified in each smooth (\code{ks}), a AIC score (\code{aic}) for each model and the associated formula (\code{f}). See Comber et al (2026) \url{https://doi.org/10.1080/13658816.2026.2671964}. The output should be passed to the \code{gam_model_rank} function.
+a \code{data.frame} with indices for each predictor variable, the knots specified in each smooth (\code{ks}), a AIC score (\code{aic}) for each model and the associated formula (\code{f}). See Comber et al (2026) \doi{10.1080/13658816.2026.2671964}. The output should be passed to the \code{gam_model_rank} function.
 }
 \description{
 Evaluates multiple models with each predictor variable specified in different ways in order to determining model form
